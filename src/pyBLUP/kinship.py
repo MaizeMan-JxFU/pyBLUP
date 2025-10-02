@@ -1,0 +1,59 @@
+import numpy as np
+
+class KIN:
+    def __init__(self,SNP:np.ndarray,method:str='VanRanden'):
+        '''
+        rowname: indv
+        colname: SNP
+        '''
+        # print(f'Initializing of kinship (Method:{method})...')
+        # print(f'Number of SNP: {SNP.shape[1]}')
+        missf = 0.05
+        maff = 0.02
+        missr = (SNP<0).sum(axis=0)/SNP.shape[0] # 统计每个SNP的缺失率
+        maf = SNP.sum(axis=0)/(2*SNP.shape[0]) # 统计每个SNP的maf
+        SNP = SNP[:,((missr<=missf)&(maf>=maff)&(maf<=(1-maff)))] # 保留缺失率低于5%且maf大于2%的SNP
+        missr = (SNP<0).sum(axis=0)/SNP.shape[0] # 每个SNP的缺失率
+        if (missr>0).sum()>0: # 存在缺失值进行简单均值填充
+            for i,mr in enumerate(missr):
+                if mr > 0:
+                    SNP_col = SNP[:,i]
+                    SNP[SNP_col<0,i] = np.sum(SNP_col[SNP_col>=0])/np.sum(SNP_col>=0) # 为每列SNP 填充缺失填
+        # print(f'Number of effective SNP: {SNP.shape[1]}')
+        self.sample_size = SNP.shape[0]
+        p_i:np.ndarray = SNP.sum(axis=0)/(2*self.sample_size) # 每个SNP的次等位基因频率
+        SNP[:,p_i>.5] = 2 - SNP[:,p_i>.5] # 矫正每个SNP的次等位基因
+        p_i[p_i>.5] = 1-p_i[p_i>.5] # 矫正每个SNP的次等位基因
+        self.p_i = p_i.astype(np.float32)
+        self.SNP_mean = SNP.mean(axis=0)
+        self.SNP_std = SNP.std(axis=0)
+        self.method = method
+        self.SNP = SNP
+        pass
+    def kinship(self, SNP:np.ndarray=None) -> np.ndarray:
+        SNP = self.SNP.astype(np.float32) if SNP is None else SNP.astype(np.float32)
+        method = self.method
+        p_i = self.p_i
+        if method == 'VanRanden':
+            Z:np.ndarray = SNP - 2*p_i
+            p_sum = 2*np.sum(p_i*(1-p_i))
+            return Z@Z.T/p_sum
+        elif method == 'gemma1':
+            Z:np.ndarray = SNP - self.SNP_mean
+            return Z@Z.T/Z.shape[1]
+        elif method == 'gemma2':
+            Z:np.ndarray = (SNP - self.SNP_mean)/self.SNP_std
+            return Z@Z.T/Z.shape[1]
+        elif method == 'pearson':
+            return np.corrcoef(SNP)
+    def chunk_kinship(self,split_num:int=4) -> np.ndarray[tuple[int, ...], np.dtype[np.float32]]:
+        # o = int(split_num*(split_num-1)/2)
+        # print(f'Runing by {split_num} matrix(O={o})...')
+        SNP = self.SNP
+        chunks = np.linspace(0,self.sample_size,split_num,dtype=int)
+        kin = np.zeros(shape=(self.sample_size,self.sample_size),dtype=np.float32)
+        for ind1 in range(len(chunks)-1):
+            for ind2 in range(ind1,len(chunks)-1):
+                SNP_sub = np.concatenate([SNP[chunks[ind1]:chunks[ind1+1],:],SNP[chunks[ind2]:chunks[ind2+1],:]],axis=0,dtype=np.float32) # 分块计算 kinship
+                kin[chunks[ind1]:chunks[ind1+1],chunks[ind2]:chunks[ind2+1]] = self.kinship(SNP_sub)[:chunks[ind1+1]-chunks[ind1],chunks[ind1+1]-chunks[ind1]:]
+        return np.triu(kin,k=0)+np.triu(kin,k=1).T
