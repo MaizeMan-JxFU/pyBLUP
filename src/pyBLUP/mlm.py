@@ -37,12 +37,13 @@ class MLM:
     
 class BLUP:
     def __init__(self,y:np.ndarray=None,X:np.ndarray=None,M:np.ndarray=None,Z:np.ndarray=None, kinship:str=None):
-        '''
-        X: designed matrix for fixed effect nxp\n
-        y: phenotype nx1\n
-        Z: designed matrix for random effect nxq\n
-        M: M matrix (0,1,2 of SNP)\n
-        kinship: Calculation method of kinship matrix
+        '''Fast Solve of Mixed Linear Model by Brent.
+        
+        :param y: Phenotype nx1\n
+        :param X: Designed matrix for fixed effect nxp\n
+        :param Z: Designed matrix for random effect nxq\n
+        :param M: Marker matrix (0,1,2 of SNP)\n
+        :param kinship: Calculation method of kinship matrix ('VanRanden','pearson','gemma1','gemma2')
         '''
         Z = Z if Z is not None else np.eye(y.shape[0]) # 设计矩阵 或 单位矩阵(一般没有重复则采用单位矩阵)
         X = np.concatenate([np.ones((X.shape[0],1)),X],axis=1) if X is not None else np.ones((y.shape[0],1)) # 设计矩阵 或 n1 向量
