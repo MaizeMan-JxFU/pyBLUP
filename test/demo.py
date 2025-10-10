@@ -11,7 +11,6 @@ def mlm_test() -> None:
     for i in range(snp_num):
         maf = np.random.uniform(0.05,0.5)
         x[:,i] = np.random.binomial(2,maf,size=sample_num)
-    np.savetxt('geno.tsv',delimiter='\t',fmt='%.0f')
     u = np.random.normal(0,sigmau,size=(snp_num,1)) # effect of SNP 服从正态分布
     g = x @ u
     e = np.random.normal(0,np.sqrt((1-pve)/pve*(g.var())),size=(sample_num,1))

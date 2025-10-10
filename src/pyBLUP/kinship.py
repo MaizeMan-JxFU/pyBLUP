@@ -1,5 +1,5 @@
 import numpy as np
-
+from .QC import QC
 class KIN:
     def __init__(self,SNP:np.ndarray,method:str='VanRanden'):
         '''
@@ -8,17 +8,9 @@ class KIN:
         '''
         # print(f'Initializing of kinship (Method:{method})...')
         # print(f'Number of SNP: {SNP.shape[1]}')
-        missf = 0.05
-        maff = 0.02
-        missr = (SNP<0).sum(axis=0)/SNP.shape[0] # 统计每个SNP的缺失率
-        maf = SNP.sum(axis=0)/(2*SNP.shape[0]) # 统计每个SNP的maf
-        SNP = SNP[:,((missr<=missf)&(maf>=maff)&(maf<=(1-maff)))] # 保留缺失率低于5%且maf大于2%的SNP
-        missr = (SNP<0).sum(axis=0)/SNP.shape[0] # 每个SNP的缺失率
-        if (missr>0).sum()>0: # 存在缺失值进行简单均值填充
-            for i,mr in enumerate(missr):
-                if mr > 0:
-                    SNP_col = SNP[:,i]
-                    SNP[SNP_col<0,i] = np.sum(SNP_col[SNP_col>=0])/np.sum(SNP_col>=0) # 为每列SNP 填充缺失填
+        qc = QC(SNP)
+        SNP = qc.simple_QC()
+        self.SNP_retain = qc.SNP_retain
         # print(f'Number of effective SNP: {SNP.shape[1]}')
         self.sample_size = SNP.shape[0]
         p_i:np.ndarray = SNP.sum(axis=0)/(2*self.sample_size) # 每个SNP的次等位基因频率
