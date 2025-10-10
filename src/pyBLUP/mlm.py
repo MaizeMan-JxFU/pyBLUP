@@ -89,7 +89,7 @@ class BLUP:
         self.X = self.X
         self.result = minimize_scalar(lambda lbd: -self._REML(lbd),bounds=(1e-6,1e6),method='bounded') # 寻找lbd 最大化似然函数
         Vg = np.trace(self.S)/self.n
-        Ve = self.result.x[0,0]
+        Ve = self.result.x
         self.pve = Vg/(Vg+Ve)
         self.u = self.G@self.Z.T@self.V_inv@self.r
         return
