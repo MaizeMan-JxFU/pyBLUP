@@ -1,7 +1,7 @@
 library(rrBLUP)
 #random population of 200 lines with 1000 markers
 snp_num = 10000
-sample_num = 10000
+sample_num = 2000
 M <- matrix(rep(0,sample_num*snp_num),sample_num,snp_num)
 for (i in 1:sample_num) {
     M[i,] <- ifelse(runif(snp_num)<0.5,-1,1)
