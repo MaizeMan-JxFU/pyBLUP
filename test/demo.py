@@ -29,4 +29,5 @@ def mlm_test() -> None:
         real_pred = np.concatenate([np.array(_),np.array(_hat)],axis=1)
         print(f'{i}({round(model.pve,3)})',np.corrcoef(real_pred,rowvar=False)[0,1])
 
-mlm_test()
+if __name__ == "__main__":
+    pass
