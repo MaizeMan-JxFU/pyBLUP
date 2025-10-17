@@ -27,7 +27,8 @@ def mlm_test() -> None:
         _+=y.tolist()
         _hat+=y_hat.tolist()
         real_pred = np.concatenate([np.array(_),np.array(_hat)],axis=1)
-        print(f'{i}({round(model.pve,3)})',np.corrcoef(real_pred,rowvar=False)[0,1])
+        print(f'{i}({round(model.pve[0,0],3)})',np.corrcoef(real_pred,rowvar=False)[0,1])
 
 if __name__ == "__main__":
+    mlm_test()
     pass
