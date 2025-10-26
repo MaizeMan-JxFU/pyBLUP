@@ -1,7 +1,7 @@
 [project]
 name = "pyBLUP"
 version = "1.0.0"
-requires-python = ">=3.9"
+requires-python = ">=3.9,<3.14" # bed_reader is not compatible with python3.14
 dependencies = [
     "numpy",
     "scipy",

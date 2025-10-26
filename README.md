@@ -2,7 +2,7 @@
 
 ## Dependence
 
->python>=3.9
+>python>=3.9 & <3.14 (bed_reader is not compatible with python3.14)
 
 ## Installation
 
