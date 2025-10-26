@@ -102,6 +102,5 @@ for i in pheno.columns:
         del results,results_save,manhan,gwasmodel,p,famid_pheno,famid_geno
     else:
         print(f'Phenotype {i} has no overlapping samples with genotype, please check sample id. skipped.\n')
-    break
 lt = time.localtime()
 print(f'\nFinished, Total time: {round(time.time()-t,2)} secs\n{lt.tm_year}-{lt.tm_mon}-{lt.tm_mday} {lt.tm_hour}:{lt.tm_min}:{lt.tm_sec}')
