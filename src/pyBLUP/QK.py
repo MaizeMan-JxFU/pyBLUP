@@ -38,7 +38,7 @@ class QK:
         self.std = np.sqrt(2 * self.p_i * (1 - self.p_i))
         self.Mmean = np.array(self.Mmean,dtype=np.float32)
         self.Mstd = np.array(self.Mstd,dtype=np.float32)
-    def _k(self, Msub:np.ndarray=None,method:str='VanRanden') -> np.ndarray:
+    def _k(self, Msub:np.ndarray=None,method:str='VanRanden'):
         if method == 'VanRanden':
             Z:np.ndarray = Msub - 2*self.p_i
             p_sum = 2*np.sum(self.p_i*(1-self.p_i))

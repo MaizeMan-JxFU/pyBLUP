@@ -22,7 +22,7 @@ class KIN:
         self.method = method
         self.SNP = SNP
         pass
-    def kinship(self, SNP:np.ndarray=None) -> np.ndarray:
+    def kinship(self, SNP:np.ndarray=None):
         SNP = self.SNP.astype(np.float32) if SNP is None else SNP.astype(np.float32)
         method = self.method
         p_i = self.p_i
@@ -38,7 +38,7 @@ class KIN:
             return Z@Z.T/Z.shape[1]
         elif method == 'pearson':
             return np.corrcoef(SNP)
-    def chunk_kinship(self,split_num:int=4) -> np.ndarray[tuple[int, ...], np.dtype[np.float32]]:
+    def chunk_kinship(self,split_num:int=4):
         # o = int(split_num*(split_num-1)/2)
         # print(f'Runing by {split_num} matrix(O={o})...')
         SNP = self.SNP

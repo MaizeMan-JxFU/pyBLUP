@@ -7,7 +7,7 @@ class PCA:
         '''
         self.dim = dim
         pass
-    def fit_transfer(self, X_tain:np.ndarray, exp_min=None) -> np.ndarray:
+    def fit_transfer(self, X_tain:np.ndarray, exp_min=None):
         '''
         exp_min: Minimum cumsum of variance (方差贡献率累加)
         '''
@@ -22,7 +22,7 @@ class PCA:
         dim = self.dim
         self.V = Vh[:dim,:].T
         return matrix@self.V # plink vec
-    def pred(self,X:np.array) -> np.ndarray:
+    def pred(self,X:np.array):
         matrix = X
         p = (matrix.sum(axis=0)+1)/(2*matrix.shape[0]+2)
         matrix = (matrix - 2*p)/np.sqrt(2*p*(1-p)) 
