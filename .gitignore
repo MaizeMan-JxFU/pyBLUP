@@ -5,3 +5,5 @@ example/*.k.*
 dist/*
 # ignore test folder
 test/*
+# ignore vscode settings folder
+.vscode/*

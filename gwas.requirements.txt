@@ -1,3 +1,3 @@
-dist/pyblup-1.0.0-py2.py3-none-any.whl # CORE PACKAGE
+.
 bioplotkit # plot package
 gfreader==1.0.2 # genetic data reader package

@@ -3,7 +3,8 @@
 ## Installation
 
 ```bash
-pip install git+https://github.com/MaizeMan-JxFU/pyBLUP.git
+pip install git+https://github.com/MaizeMan-JxFU/pyBLUP.git; cd pyBLUP
+pip install . # only pyBLUP
 ```
 
 ## Usage
@@ -70,7 +71,7 @@ print(results)
 
 ```shell
 git clone https://github.com/MaizeMan-JxFU/pyBLUP.git; cd pyBLUP
-pip install -r gwas.requirements.txt # greader, biokit, pyBLUP
+pip install -r gwas.requirements.txt # gfreader, bioplotkit, pyBLUP for gwas cli
 # python gwas.py # {plinkfile|vcffile} {phenotypefile} {outputfolder} \
 # {KinshipMethod default:VanRanden} {Qdimension default:3} {Accuracy default:False}
 python gwas.py example/mouse_hs1940 example/mouse_hs1940.pheno test/ VanRanden 3 True
