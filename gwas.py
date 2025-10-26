@@ -32,6 +32,8 @@ gfile,phenofile,outfolder = sys.argv[1],sys.argv[2],sys.argv[3]
 kinship_method = sys.argv[4] if len(sys.argv)>=5 else 'VanRanden'# {'VanRanden', 'gemma1', 'gemma2', 'pearson'}
 qdim = int(sys.argv[5]) if len(sys.argv)>=6 else 3
 HighAC = bool(sys.argv[6]) if len(sys.argv)>=7 else False
+if not os.path.exists(outfolder):
+    os.makedirs(outfolder,mode=0o755)
 prefix = gfile.replace('.vcf','').replace('.gz','')
 print(f'Loading genotype from {gfile}...')
 geno = vcfreader(rf'{gfile}').iloc[:,2:].T if gfile[-4:] == '.vcf' or gfile[-7:] == '.vcf.gz' else breader(rf'{gfile}').iloc[:,2:].T # PLINK格式
