@@ -2,6 +2,6 @@
 example/*.q.*
 example/*.k.*
 # ignore build folder
-dist/
+dist/*
 # ignore test folder
-test/
+test/*
