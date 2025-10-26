@@ -1,5 +1,9 @@
 # pyBLUP
 
+## Dependence
+
+>python>=3.9
+
 ## Installation
 
 ```bash

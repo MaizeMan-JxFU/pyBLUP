@@ -14,14 +14,14 @@ class GWAS:
         :param X: Designed matrix for fixed effect nxp\n
         :param kinship: Calculation method of kinship matrix nxn
         '''
-        X = np.concatenate([np.ones((y.shape[0],1)),X],axis=1) if X is not None else np.ones((y.shape[0],1)) # 设计矩阵 或 n1 向量
-        # 简化G矩阵求逆
+        X = np.concatenate([np.ones((y.shape[0],1)),X],axis=1) if X is not None else np.ones((y.shape[0],1))
+        # simplify G matrix
         self.D, self.S, self.Dh = np.linalg.svd(kinship + 1e-6 * np.eye(y.shape[0]))
         del kinship
         del self.D
         self.Xcov = self.Dh@X
         self.y = self.Dh@y
-        result = minimize_scalar(lambda lbd: -self._NULLREML(10**(lbd)),bounds=(-6,6),method='bounded',options={'xatol': 1e-6},) # 寻找lbd 最大化似然函数
+        result = minimize_scalar(lambda lbd: -self._NULLREML(10**(lbd)),bounds=(-6,6),method='bounded',options={'xatol': 1e-6},)
         lbd_null = 10**(result.x[0,0])
         vg_null = np.mean(self.S)
         pve = vg_null/(vg_null+lbd_null)
@@ -30,7 +30,7 @@ class GWAS:
         self.bounds = (np.log10(lbd_null)-2,np.log10(lbd_null)+2)
         pass
     def _NULLREML(self,lbd: float):
-        '''直接用零假设结果进行近似估计'''
+        '''Restricted Maximum Likelihood Estimation (REML) of NULL'''
         n,p_cov = self.Xcov.shape
         p = p_cov
         V = self.S+lbd
@@ -47,7 +47,7 @@ class GWAS:
         c = (n-p)*(np.log(n-p)-1-np.log(2*np.pi))/2 # Contant
         return c - total_log / 2
     def _REML(self,lbd: float, snp_vec:np.array):
-        '''直接用零假设结果进行近似估计'''
+        '''Restricted Maximum Likelihood Estimation (REML)'''
         n,p_cov = self.Xcov.shape
         p = p_cov + 1
         V = self.S+lbd
@@ -91,7 +91,12 @@ class GWAS:
         return beta[-1,0],se,lbd
     def gwas(self,snp:np.ndarray=None,chunksize=500_000):
         '''
-        Speed model
+        Speed version of mlm
+        
+        :param snp: Marker matrix, np.ndarray, samples per rows and snp per columns
+        :param chunksize: calculation number per times, int
+        
+        :return: beta coefficients, standard errors and p-values for each SNP, np.ndarray
         '''
         num_snp = snp.shape[1]
         chunk_indexs = [i for i in range(0,num_snp,chunksize)] # 速度换内存
@@ -106,9 +111,6 @@ class GWAS:
             snp_retain = np.append(snp_retain,qc.SNP_retain)
             snp_chunk = self.Dh@snp_chunk
             def process_col(i):
-                '''
-                多线程求解beta和se
-                '''
                 return self._fit(snp_chunk[:, i])
             results = np.array(Parallel(n_jobs=-1)(delayed(process_col)(i) for i in range(snp_chunk.shape[1])))
             beta_se_p.append(np.concatenate([results,2*norm.sf(np.abs(results[:,0]/results[:,1])).reshape(-1,1)],axis=1))
@@ -119,7 +121,12 @@ class GWAS:
         return np.concatenate(beta_se_p)
     def gwasHAC(self,snp:np.ndarray=None,chunksize=500_000):
         '''
-        High accuracy model
+        Speed version of mlm
+        
+        :param snp: Marker matrix, np.ndarray, samples per rows and snp per columns
+        :param chunksize: calculation number per times, int
+        
+        :return: beta coefficients, standard errors and p-values for each SNP, np.ndarray
         '''
         lbds = []
         num_snp = snp.shape[1]

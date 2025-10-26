@@ -3,11 +3,13 @@ import time
 from .QC import QC
 
 class QK:
-    def __init__(self,M:np.ndarray,chunksize=500_000,low_memory=True):
+    def __init__(self,M:np.ndarray,chunksize:int=500_000,low_memory: bool=True):
         '''
         Calculation of Q and K matrix with low memory and high speed
         
         :param M: marker matrix with n samples multiply m snp (0,1,2 int8)
+        :param chunksize: int (default: 500_000)
+        :param low_memory: bool (default: True)
         '''
         n,m = M.shape
         self.chunksize = chunksize
@@ -53,7 +55,9 @@ class QK:
             return np.corrcoef(Msub)
     def kinship(self,split_num:int=15,method:str='VanRanden'):
         '''
-        :param method: {'VanRanden', 'gemma1', 'gemma2', 'pearson'}
+        :param split_num: int
+        :param method: str {'VanRanden', 'gemma1', 'gemma2', 'pearson'}
+        :return: np.ndarray, positive definite matrix or positive semidefinite matrix
         '''
         n,m = self.M.shape
         o = int(split_num*(split_num-1)/2)
@@ -72,12 +76,20 @@ class QK:
         return np.triu(kin,k=0)+np.triu(kin,k=1).T
     def pca(self,):
         '''
-        检验 rpca 的计算正确性
+        test result of rpca
         '''
         M = (self.M - 2*self.p_i)/np.sqrt(2*self.p_i*(1-self.p_i)) # standard M matrix
         eigenvec, eigenval, Vh = np.linalg.svd(M,full_matrices=False)
         return eigenvec, eigenval
     def rpca(self, dim=10, iter_num=5, chunk_size=1000):
+        '''
+        random SVD
+        
+        :param dim: dimension of pc
+        :param iter_num: iteration numbers of Q matrix
+        
+        :return: tuple, (eigenvec[:, :dim], eigenval[:dim])
+        '''
         # M = ((self.M - 2 * self.p_i) / self.std).T  # n x m matrix
         n, m = self.M.T.shape
         l = dim + 10
