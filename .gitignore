@@ -1,0 +1,7 @@
+# ignore k and q matrix file in example folder
+example/*.q.*
+example/*.k.*
+# ignore build folder
+dist/
+# ignore test folder
+test/
