@@ -3,7 +3,7 @@ import time
 from .QC import QC
 
 class QK:
-    def __init__(self,M:np.ndarray,chunksize:int=500_000,low_memory: bool=True):
+    def __init__(self,M:np.ndarray,chunksize:int=500_000,low_memory: bool=True,log:bool=False):
         '''
         Calculation of Q and K matrix with low memory and high speed
         
@@ -11,6 +11,7 @@ class QK:
         :param chunksize: int (default: 500_000)
         :param low_memory: bool (default: True)
         '''
+        self.log = log
         n,m = M.shape
         self.chunksize = chunksize
         chunk_indexs = [i for i in range(0,m,chunksize)] # 内存换速度
@@ -31,8 +32,10 @@ class QK:
             self.Mstd.extend(M_chunk.std(axis=0))
             _.append(M_chunk)
             del M_chunk
-            print(f'''\rProgress of initialization: {round(100*chunk_indexs[ii+1]/m,2)}% (time cost: {round((time.time()-t_start)/60,2)} mins)''',end='')
-        print()
+            if self.log:
+                print(f'''\rProgress of initialization: {round(100*chunk_indexs[ii+1]/m,2)}% (time cost: {round((time.time()-t_start)/60,2)} mins)''',end='')
+        if self.log:
+            print()
         del M
         self.M = np.concatenate(_,axis=1)
         del _
@@ -71,8 +74,10 @@ class QK:
                 SNP_sub = np.concatenate([self.M[chunks[ind1]:chunks[ind1+1],:],self.M[chunks[ind2]:chunks[ind2+1],:]],axis=0,dtype=np.float32) # 分块计算 kinship
                 kin[chunks[ind1]:chunks[ind1+1],chunks[ind2]:chunks[ind2+1]] = self._k(SNP_sub,method)[:chunks[ind1+1]-chunks[ind1],chunks[ind1+1]-chunks[ind1]:]
                 del SNP_sub
-                print(f'''\rProgress of calculating kinship matrix: {round(100*iter_num/o,2)}% (time cost: {round((time.time()-t_start)/60,2)} mins)''',end='')
-        print()
+                if self.log:
+                    print(f'''\rProgress of calculating kinship matrix: {round(100*iter_num/o,2)}% (time cost: {round((time.time()-t_start)/60,2)} mins)''',end='')
+        if self.log:
+            print()
         return np.triu(kin,k=0)+np.triu(kin,k=1).T
     def pca(self,):
         '''
@@ -117,8 +122,10 @@ class QK:
                 end_i = min(i + chunk_size, n)
                 M_sub = ((self.M[:,i:end_i] - 2 * self.p_i[i:end_i]) / self.std[i:end_i]).T
                 Y[i:end_i] = M_sub @ Z
-            print(f'''\rProgress of randomSVD for q matrix: {round(100*(_+1)/iter_num,2)}% (time cost: {round((time.time()-t_start)/60,2)} mins)''',end='')
-        print()
+            if self.log:
+                print(f'''\rProgress of randomSVD for q matrix: {round(100*(_+1)/iter_num,2)}% (time cost: {round((time.time()-t_start)/60,2)} mins)''',end='')
+        if self.log:
+            print()
         Q, _ = np.linalg.qr(Y)
         # 分块计算 B = Q.T @ M
         B = np.zeros((l, m), dtype=np.float32)

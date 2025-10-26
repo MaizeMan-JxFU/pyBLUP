@@ -47,7 +47,7 @@ pheno.index = pheno.index.astype(str)
 print('Geno and Pheno are ready!')
 
 if not os.path.exists(f'{prefix}.k.{kinship_method}.txt') or not os.path.exists(f'{prefix}.q.{qdim}.txt'):
-    qkmodel = QK(geno.values,low_memory=True)
+    qkmodel = QK(geno.values,low_memory=True,log=True)
     print('Samples and SNP:',geno.shape)
 if os.path.exists(f'{prefix}.k.{kinship_method}.txt'):
     print(f'* Loading K matrix from {prefix}.k.{kinship_method}.txt...')
