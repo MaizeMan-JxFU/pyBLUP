@@ -55,7 +55,11 @@ class GWAS:
         X_cov_snp = np.column_stack([self.Xcov, snp_vec])
         XTV_invX = V_inv*X_cov_snp.T @ X_cov_snp
         XTV_invy = V_inv*X_cov_snp.T @ self.y
-        beta = np.linalg.solve(XTV_invX,XTV_invy)
+        try:
+            beta = np.linalg.solve(XTV_invX, XTV_invy)
+        except np.linalg.LinAlgError:
+            # 添加正则项, 并尝试伪逆
+            beta = np.linalg.pinv(XTV_invX+1e-6*np.eye(XTV_invX.shape[0])) @ XTV_invy
         r = self.y - X_cov_snp@beta
         rTV_invr = V_inv * r.T@r
         log_detV = np.sum(np.log(V))
