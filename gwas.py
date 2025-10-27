@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import time
+import socket
 import sys
 import os
 def format_dataframe_for_export(df:pd.DataFrame, scientific_cols=None, float_cols=None):
@@ -26,8 +27,11 @@ def format_dataframe_for_export(df:pd.DataFrame, scientific_cols=None, float_col
             if col in df_export.columns and df_export[col].dtype in [np.float64, np.int64]:
                 df_export[col] = df_export[col].apply(lambda x: f"{x:.4f}")
     return df_export
+def green_output(string:str):
+    return f'\033[92m{string}\033[0m'
 t = time.time()
-
+print(green_output('High Performance LMM Solver for GWAS'))
+print(green_output(f'Host: {socket.gethostname()}'),end='\n\n')
 gfile,phenofile,outfolder = sys.argv[1],sys.argv[2],sys.argv[3]
 kinship_method = sys.argv[4] if len(sys.argv)>=5 else 'VanRanden'# {'VanRanden', 'gemma1', 'gemma2', 'pearson'}
 qdim = sys.argv[5] if len(sys.argv)>=6 else 3
@@ -54,7 +58,7 @@ if qcal or kcal:
         qkmodel = QK(geno.values,low_memory=True,log=True)
         print('Samples and SNP:',geno.shape)
     if os.path.exists(f'{prefix}.k.{kinship_method}.txt'):
-        print(f'* Loading K matrix from {prefix}.k.{kinship_method}.txt...')
+        print(f'* Loading GRM from {prefix}.k.{kinship_method}.txt...')
         kmatrix = pd.read_csv(f'{prefix}.k.{kinship_method}.txt',sep=r'\s+',header=None).values
     else:    
         print(f'* Calculation method of kinship matrix is {kinship_method}')
@@ -71,17 +75,19 @@ if qcal or kcal:
 
 else:
     if not qcal and os.path.exists(qdim):
+        print(f'* Loading Q matrix from {qdim}...')
         qmatrix = np.genfromtxt(qdim)
     else:
         print(f'{qdim} is not a number and a file')
     if not kcal and os.path.exists(kinship_method):
+        print(f'* Loading GRM from {kinship_method}...')
         kmatrix = np.genfromtxt(kinship_method)
     else:
         print(f'{qdim} is not a calculation method of kinship and a file')
-print(f'kmatrix ({kmatrix.shape}):')
+print(f'kmatrix {kmatrix.shape}:')
 print(kmatrix[:5,:5])
-print(f'qmatrix ({qmatrix.shape}):')
-print(qmatrix[:5,:5]) if qdim > 5 else print(qmatrix[:5,:qdim])
+print(f'qmatrix {qmatrix.shape}:')
+print(qmatrix[:5,:5])
 
 # sci_set()
 for i in pheno.columns:
@@ -101,7 +107,7 @@ for i in pheno.columns:
         results = pd.DataFrame(results,columns=['beta','se','p'],index=snp_chrloc[gwasmodel.snp_retain]).reset_index()
         results_save = format_dataframe_for_export(results, scientific_cols=['p'], float_cols=['beta','se'])
         results_save.to_csv(f'{outfolder}/{i}.tsv',sep='\t',index=False)
-        print(f'Saved in {outfolder}/{i}.tsv')
+        print(f'Saved in {outfolder}/{i}.tsv'.replace('//','/'))
         
         manhan = GWASPLOT(results,'#CHROM','POS','p')
         plt.figure(figsize=(12,4),dpi=300)
@@ -112,9 +118,9 @@ for i in pheno.columns:
         plt.tight_layout()
         print('Visualizing...')
         plt.savefig(f'{outfolder}/{i}.png')
-        print(f'Saved in {outfolder}/{i}.png\n')
+        print(f'Saved in {outfolder}/{i}.png\n'.replace('//','/'))
         del results,results_save,manhan,gwasmodel,p,famid_pheno,famid_geno
     else:
         print(f'Phenotype {i} has no overlapping samples with genotype, please check sample id. skipped.\n')
 lt = time.localtime()
-print(f'\nFinished, Total time: {round(time.time()-t,2)} secs\n{lt.tm_year}-{lt.tm_mon}-{lt.tm_mday} {lt.tm_hour}:{lt.tm_min}:{lt.tm_sec}')
+print(green_output(f'\nFinished, Total time: {round(time.time()-t,2)} secs\n{lt.tm_year}-{lt.tm_mon}-{lt.tm_mday} {lt.tm_hour}:{lt.tm_min}:{lt.tm_sec}'))
