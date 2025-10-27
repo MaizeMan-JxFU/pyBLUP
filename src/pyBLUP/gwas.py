@@ -54,7 +54,7 @@ class GWAS:
             c = (n-p)*(np.log(n-p)-1-np.log(2*np.pi))/2 # Contant
             return c - total_log / 2
         except Exception as e:
-            print(f"REML 计算错误: {e}, lbd={lbd}")
+            print(f"REML error: {e}, lbd={lbd}")
             return -1e12
     def _REML(self,lbd: float, snp_vec:np.array):
         '''Restricted Maximum Likelihood Estimation (REML)'''
@@ -78,7 +78,7 @@ class GWAS:
             c = (n-p)*(np.log(n-p)-1-np.log(2*np.pi))/2 # Contant
             return c - total_log / 2
         except Exception as e:
-            print(f"REML 计算错误: {e}, lbd={lbd}")
+            print(f"REML error: {e}, lbd={lbd}")
             return -1e12
     def _fit(self,snp:np.ndarray=None):
         X = np.column_stack([self.Xcov, snp])
@@ -168,7 +168,7 @@ class GWAS:
             snp_chunk = self.Dh@snp_chunk
             def process_col(i):
                 '''
-                多线程求解beta和se
+                solving beta and its se in multiprocess
                 '''
                 return self._HACfit(snp_chunk[:, i])
             if snp_chunk.shape[1]>0:
