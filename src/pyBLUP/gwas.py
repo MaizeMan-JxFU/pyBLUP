@@ -59,7 +59,7 @@ class GWAS:
             beta = np.linalg.solve(XTV_invX, XTV_invy)
         except np.linalg.LinAlgError:
             # 添加正则项, 并尝试伪逆
-            beta = np.linalg.pinv(XTV_invX+1e-6*np.eye(XTV_invX.shape[0])) @ XTV_invy
+            beta = np.linalg.solve(XTV_invX+1e-6*np.eye(XTV_invX.shape[0])) @ XTV_invy
         r = self.y - X_cov_snp@beta
         rTV_invr = V_inv * r.T@r
         log_detV = np.sum(np.log(V))
