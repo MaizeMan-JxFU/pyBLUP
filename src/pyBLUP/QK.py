@@ -33,7 +33,11 @@ class QK:
             _.append(M_chunk)
             del M_chunk
             if self.log:
-                print(f'''\rProgress of initialization: {round(100*chunk_indexs[ii+1]/m,2)}% (time cost: {round((time.time()-t_start)/60,2)} mins)''',end='')
+                iter_ratio = chunk_indexs[ii+1]/m
+                time_cost = time.time()-t_start
+                time_left = time_cost/iter_ratio
+                all_time_info = f'''{round(100*iter_ratio,2)}% (time cost: {round(time_cost/60,2)}/{round(time_left/60,2)} mins)'''
+                print(f'''\rInitialization of loading and QC: {all_time_info}''',end='')
         if self.log:
             print()
         del M
@@ -75,7 +79,11 @@ class QK:
                 kin[chunks[ind1]:chunks[ind1+1],chunks[ind2]:chunks[ind2+1]] = self._k(SNP_sub,method)[:chunks[ind1+1]-chunks[ind1],chunks[ind1+1]-chunks[ind1]:]
                 del SNP_sub
                 if self.log:
-                    print(f'''\rProgress of calculating kinship matrix: {round(100*iter_num/o,2)}% (time cost: {round((time.time()-t_start)/60,2)} mins)''',end='')
+                    iter_ratio = iter_num/o
+                    time_cost = time.time()-t_start
+                    time_left = time_cost/iter_ratio
+                    all_time_info = f'''{round(100*iter_ratio,2)}% (time cost: {round(time_cost/60,2)}/{round(time_left/60,2)} mins)'''
+                    print(f'''\rProgress of calculating GRM: {all_time_info}''',end='')
         if self.log:
             print()
         return np.triu(kin,k=0)+np.triu(kin,k=1).T
@@ -123,7 +131,11 @@ class QK:
                 M_sub = ((self.M[:,i:end_i] - 2 * self.p_i[i:end_i]) / self.std[i:end_i]).T
                 Y[i:end_i] = M_sub @ Z
             if self.log:
-                print(f'''\rProgress of randomSVD for q matrix: {round(100*(_+1)/iter_num,2)}% (time cost: {round((time.time()-t_start)/60,2)} mins)''',end='')
+                iter_ratio = (_+1)/iter_num
+                time_cost = time.time()-t_start
+                time_left = time_cost/iter_ratio
+                all_time_info = f'''{round(100*iter_ratio,2)}% (time cost: {round(time_cost/60,2)}/{round(time_left/60,2)} mins)'''
+                print(f'''\rProgress of calculating population stratification (randomSVD, PCA): {all_time_info}''',end='')
         if self.log:
             print()
         Q, _ = np.linalg.qr(Y)
