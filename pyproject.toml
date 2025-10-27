@@ -5,7 +5,8 @@ requires-python = ">=3.9,<3.14" # bed_reader is not compatible with python3.14
 dependencies = [
     "numpy",
     "scipy",
-    "joblib>=1.5.2"
+    "joblib>=1.5.2",
+    "psutil"
 ]
 
 [build-system]
