@@ -2,7 +2,7 @@
 
 ## Dependence
 
->python>=3.9 & <3.14 (bed_reader is not compatible with python3.14)
+>python: 3.9-3.13 (bed_reader is not compatible with python3.14)
 
 ## Installation
 
@@ -76,10 +76,9 @@ print(results)
 ```shell
 git clone https://github.com/MaizeMan-JxFU/pyBLUP.git; cd pyBLUP
 pip install -r gwas.requirements.txt # gfreader, bioplotkit, pyBLUP for gwas cli
-# python gwas.py # {plinkfile|vcffile} {phenotypefile} {outputfolder} \
-# {KinshipMethod default:VanRanden} {Qdimension default:3} {Accuracy default:False}
-python gwas.py example/mouse_hs1940 example/mouse_hs1940.pheno test/ VanRanden 3 True
-python gwas.py example/mouse_hs1940.vcf.gz example/mouse_hs1940.pheno test/ VanRanden 3 True
+# python gwas.py -h
+python gwas.py --vcf example/mouse_hs1940.vcf.gz --pheno example/mouse_hs1940.pheno --out test # windows & unix
+chmod +755 GWAS; GWAS --vcf example/mouse_hs1940.vcf.gz --pheno example/mouse_hs1940.pheno --out test # unix
 ```
 
 ![manhanden&qq](./fig/test0.png "Simple visualization")

@@ -106,7 +106,7 @@ class GWAS:
         sigma2 = rTV_invr/(n-p)
         se = np.sqrt(np.linalg.inv(XTV_invX/sigma2)[-1,-1])
         return beta[-1,0],se,lbd
-    def gwas(self,snp:np.ndarray=None,chunksize=500_000):
+    def gwas(self,snp:np.ndarray=None,chunksize=500_000,threads=-1):
         '''
         Speed version of mlm
         
@@ -130,7 +130,7 @@ class GWAS:
             def process_col(i):
                 return self._fit(snp_chunk[:, i])
             if snp_chunk.shape[1]>0:
-                results = np.array(Parallel(n_jobs=-1)(delayed(process_col)(i) for i in range(snp_chunk.shape[1])))
+                results = np.array(Parallel(n_jobs=threads)(delayed(process_col)(i) for i in range(snp_chunk.shape[1])))
                 beta_se_p.append(np.concatenate([results,2*norm.sf(np.abs(results[:,0]/results[:,1])).reshape(-1,1)],axis=1))
             if self.log:
                 iter_ratio = chunk_indexs[ii+1]/num_snp
@@ -143,7 +143,7 @@ class GWAS:
         print()
         self.snp_retain = snp_retain
         return np.concatenate(beta_se_p)
-    def gwasHAC(self,snp:np.ndarray=None,chunksize=500_000):
+    def gwasHAC(self,snp:np.ndarray=None,chunksize=500_000,threads=-1):
         '''
         Speed version of mlm
         
@@ -172,7 +172,7 @@ class GWAS:
                 '''
                 return self._HACfit(snp_chunk[:, i])
             if snp_chunk.shape[1]>0:
-                results = np.array(Parallel(n_jobs=-1)(delayed(process_col)(i) for i in range(snp_chunk.shape[1])))
+                results = np.array(Parallel(n_jobs=threads)(delayed(process_col)(i) for i in range(snp_chunk.shape[1])))
                 beta_se_p.append(np.concatenate([results[:,[0,1]],2*norm.sf(np.abs(results[:,0]/results[:,1])).reshape(-1,1)],axis=1))
                 lbds.extend(results[:,2])
             if self.log:
