@@ -53,8 +53,7 @@ def main(log:bool=True):
                                help='Output directory for results')
     # Optional arguments
     optional_group = parser.add_argument_group('Optional Arguments')
-    optional_group.add_argument('--grm', type=str, 
-                               choices=['VanRanden', 'gemma1', 'gemma2', 'pearson'],
+    optional_group.add_argument('--grm', type=str,
                                default='VanRanden',
                                help='Kinship matrix calculation method or path to pre-calculated GRM file '
                                    '(default: %(default)s)')
