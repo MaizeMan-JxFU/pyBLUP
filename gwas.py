@@ -151,7 +151,7 @@ if qcal or kcal:
         qmatrix = pd.read_csv(f'{prefix}.q.{qdim}.txt',sep=r'\s+',header=None).values
     else:    
         print(f'* Dimension of PC for q matrix is {qdim}')
-        qmatrix,eigenval = qkmodel.rpca(dim=qdim)
+        qmatrix,eigenval = qkmodel.rpca(dim=int(qdim))
         np.savetxt(f'{prefix}.q.{qdim}.txt',qmatrix,fmt='%.6f')
 
 else:
