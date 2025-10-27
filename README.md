@@ -85,3 +85,9 @@ python gwas.py example/mouse_hs1940.vcf.gz example/mouse_hs1940.pheno test/ VanR
 ![manhanden&qq](./fig/test0.png "Simple visualization")
 
 Test data in example is from [genetics-statistics/GEMMA](https://github.com/genetics-statistics/GEMMA), published in [Parker et al, Nature Genetics, 2016](https://doi.org/10.1038/ng.3609)
+
+## Update
+
+```shell
+git pull; pip install .
+```
