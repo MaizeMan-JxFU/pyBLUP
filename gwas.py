@@ -30,11 +30,14 @@ t = time.time()
 
 gfile,phenofile,outfolder = sys.argv[1],sys.argv[2],sys.argv[3]
 kinship_method = sys.argv[4] if len(sys.argv)>=5 else 'VanRanden'# {'VanRanden', 'gemma1', 'gemma2', 'pearson'}
-qdim = int(sys.argv[5]) if len(sys.argv)>=6 else 3
+qdim = sys.argv[5] if len(sys.argv)>=6 else 3
 HighAC = bool(sys.argv[6]) if len(sys.argv)>=7 else False
+kcal = True if kinship_method in ['VanRanden', 'gemma1', 'gemma2', 'pearson'] else False
+qcal = True if qdim in np.arange(20).astype(str) else False
 if not os.path.exists(outfolder):
     os.makedirs(outfolder,mode=0o755)
 prefix = gfile.replace('.vcf','').replace('.gz','')
+
 print(f'Loading genotype from {gfile}...')
 geno = vcfreader(rf'{gfile}').iloc[:,2:].T if gfile[-4:] == '.vcf' or gfile[-7:] == '.vcf.gz' else breader(rf'{gfile}').iloc[:,2:].T # PLINK格式
 geno.index = geno.index.astype(str)
@@ -46,28 +49,39 @@ pheno = pheno.groupby(pheno.columns[0]).mean() # 重复样本表型取均值
 pheno.index = pheno.index.astype(str)
 print('Geno and Pheno are ready!')
 
-if not os.path.exists(f'{prefix}.k.{kinship_method}.txt') or not os.path.exists(f'{prefix}.q.{qdim}.txt'):
-    qkmodel = QK(geno.values,low_memory=True,log=True)
-    print('Samples and SNP:',geno.shape)
-if os.path.exists(f'{prefix}.k.{kinship_method}.txt'):
-    print(f'* Loading K matrix from {prefix}.k.{kinship_method}.txt...')
-    kmatrix = pd.read_csv(f'{prefix}.k.{kinship_method}.txt',sep=r'\s+',header=None).values
-else:    
-    print(f'* Calculation method of kinship matrix is {kinship_method}')
-    kmatrix = qkmodel.kinship(method=kinship_method)
-    np.savetxt(f'{prefix}.k.{kinship_method}.txt',kmatrix,fmt='%.6f')
-print(kmatrix[:5,:5])
-print(kmatrix.shape)
+if qcal or kcal:
+    if not os.path.exists(f'{prefix}.k.{kinship_method}.txt') or not os.path.exists(f'{prefix}.q.{qdim}.txt'):
+        qkmodel = QK(geno.values,low_memory=True,log=True)
+        print('Samples and SNP:',geno.shape)
+    if os.path.exists(f'{prefix}.k.{kinship_method}.txt'):
+        print(f'* Loading K matrix from {prefix}.k.{kinship_method}.txt...')
+        kmatrix = pd.read_csv(f'{prefix}.k.{kinship_method}.txt',sep=r'\s+',header=None).values
+    else:    
+        print(f'* Calculation method of kinship matrix is {kinship_method}')
+        kmatrix = qkmodel.kinship(method=kinship_method)
+        np.savetxt(f'{prefix}.k.{kinship_method}.txt',kmatrix,fmt='%.6f')
 
-if os.path.exists(f'{prefix}.q.{qdim}.txt'):
-    print(f'* Loading Q matrix from {prefix}.q.{qdim}.txt...')
-    qmatrix = pd.read_csv(f'{prefix}.q.{qdim}.txt',sep=r'\s+',header=None).values
-else:    
-    print(f'* Dimension of PC for q matrix is {qdim}')
-    qmatrix,eigenval = qkmodel.rpca(dim=qdim)
-    np.savetxt(f'{prefix}.q.{qdim}.txt',qmatrix,fmt='%.6f')
+    if os.path.exists(f'{prefix}.q.{qdim}.txt'):
+        print(f'* Loading Q matrix from {prefix}.q.{qdim}.txt...')
+        qmatrix = pd.read_csv(f'{prefix}.q.{qdim}.txt',sep=r'\s+',header=None).values
+    else:    
+        print(f'* Dimension of PC for q matrix is {qdim}')
+        qmatrix,eigenval = qkmodel.rpca(dim=qdim)
+        np.savetxt(f'{prefix}.q.{qdim}.txt',qmatrix,fmt='%.6f')
+
+else:
+    if not qcal and os.path.exists(qdim):
+        qmatrix = np.genfromtxt(qdim)
+    else:
+        print(f'{qdim} is not a number and a file')
+    if not kcal and os.path.exists(kinship_method):
+        kmatrix = np.genfromtxt(kinship_method)
+    else:
+        print(f'{qdim} is not a calculation method of kinship and a file')
+print(f'kmatrix ({kmatrix.shape}):')
+print(kmatrix[:5,:5])
+print(f'qmatrix ({qmatrix.shape}):')
 print(qmatrix[:5,:5]) if qdim > 5 else print(qmatrix[:5,:qdim])
-print(qmatrix.shape)
 
 # sci_set()
 for i in pheno.columns:
