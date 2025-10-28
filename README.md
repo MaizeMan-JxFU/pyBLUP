@@ -78,7 +78,7 @@ git clone https://github.com/MaizeMan-JxFU/pyBLUP.git; cd pyBLUP
 pip install -r gwas.requirements.txt # gfreader, bioplotkit, pyBLUP for gwas cli
 # python gwas.py -h
 python gwas.py --vcf example/mouse_hs1940.vcf.gz --pheno example/mouse_hs1940.pheno --out test # windows & unix
-chmod +755 GWAS; GWAS --vcf example/mouse_hs1940.vcf.gz --pheno example/mouse_hs1940.pheno --out test # unix
+chmod +755 GWAS; GWAS --gwas --vcf example/mouse_hs1940.vcf.gz --pheno example/mouse_hs1940.pheno --out test # unix
 ```
 
 ![manhanden&qq](./fig/test0.png "Simple visualization")
