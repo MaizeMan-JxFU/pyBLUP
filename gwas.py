@@ -30,13 +30,11 @@ def format_dataframe_for_export(df:pd.DataFrame, scientific_cols=None, float_col
     return df_export
 def green_output(string:str):
     return f'\033[92m{string}\033[0m'
-
 def main(log:bool=True):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     docfile = os.path.join(script_dir,'doc','demo.txt')
     doc = open(docfile, 'r',).read()
     parser = argparse.ArgumentParser(
-        description='High Performance Linear Mixed Model Solver for Genome-Wide Association Studies',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=doc
     )
@@ -67,10 +65,8 @@ def main(log:bool=True):
     optional_group.add_argument('--no-AC', action='store_false', dest='AC',
                                help='Disable HighAC mode')
     args = parser.parse_args()
-    
     # Determine genotype file
     gfile = args.vcf if args.vcf else args.bfile
-    
     # Build argument list for the original script
     sys.argv = [
         sys.argv[0],  # script name
@@ -81,7 +77,6 @@ def main(log:bool=True):
         args.qcov,
         str(args.AC)
     ]
-    
     # Print configuration summary
     if log:
         print("\n" + "="*60)
@@ -104,7 +99,7 @@ def main(log:bool=True):
     return gfile,args
 
 t = time.time()
-print(green_output('High Performance LMM Solver for GWAS'))
+print(green_output('High Performance Linear Mixed Model Solver for Genome-Wide Association Studies'))
 print(green_output(f'Host: {socket.gethostname()}'),end='\n\n')
 gfile,args = main()
 phenofile,outfolder = args.pheno,args.out
