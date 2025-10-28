@@ -58,6 +58,9 @@ def main(log:bool=True):
     optional_group.add_argument('--qcov', type=str, default='3',
                                help='Number of principal components for Q matrix or path to covariate matrix file '
                                    '(default: %(default)s)')
+    optional_group.add_argument('--cov', type=str, default=None,
+                               help='Path to Covariance file '
+                                   '(default: %(default)s)')
     optional_group.add_argument('--thread', type=int, default=-1,
                                help='Number of CPU threads to use (-1 for all available cores, default: %(default)s)')
     optional_group.add_argument('--AC', action='store_true', default=True,
@@ -75,6 +78,7 @@ def main(log:bool=True):
         args.out,
         args.grm,
         args.qcov,
+        args.cov,
         str(args.AC)
     ]
     # Print configuration summary
@@ -87,6 +91,7 @@ def main(log:bool=True):
         print(f"Output directory: {args.out}")
         print(f"GRM method:       {args.grm}")
         print(f"Q matrix:         {args.qcov}")
+        print(f"Covariant matrix: {args.cov}")
         print(f"Threads:          {args.thread} ({'All cores' if args.thread == -1 else 'User specified'})")
         print(f"HighAC mode:      {args.AC}")
         print("="*60 + "\n")
@@ -105,6 +110,7 @@ gfile,args = main()
 phenofile,outfolder = args.pheno,args.out
 kinship_method = args.grm
 qdim = args.qcov
+cov = args.cov
 HighAC = args.AC
 threads = args.thread
 kcal = True if kinship_method in ['VanRanden', 'gemma1', 'gemma2', 'pearson'] else False
@@ -115,12 +121,15 @@ prefix = gfile.replace('.vcf','').replace('.gz','')
 
 if args.vcf:
     print(f'Loading genotype from {gfile}...')
-    geno = vcfreader(rf'{gfile}').iloc[:,2:].T 
+    geno = vcfreader(rf'{gfile}') # VCF format
+    ref_alt = geno.iloc[:,:2]
+    geno = geno.iloc[:,2:].T 
 else:
     print(f'Loading genotype from {gfile}.bed...')
-    geno = breader(rf'{gfile}').iloc[:,2:].T # PLINK格式
+    geno = breader(rf'{gfile}') # PLINK format
+    ref_alt = geno.iloc[:,:2]
+    geno = geno.iloc[:,2:].T
 geno.index = geno.index.astype(str)
-snp_chrloc = geno.columns
 famid = geno.index
 print(f'Loading phenotype from {phenofile}...')
 pheno = pd.read_csv(rf'{phenofile}',sep='\t') # 第一列是样本ID, 第一行是表型名
@@ -153,16 +162,25 @@ else:
         print(f'* Loading Q matrix from {qdim}...')
         qmatrix = np.genfromtxt(qdim)
     else:
-        print(f'{qdim} is not a number and a file')
+        raise f'{qdim} is not a number and a file'
     if not kcal and os.path.exists(kinship_method):
         print(f'* Loading GRM from {kinship_method}...')
         kmatrix = np.genfromtxt(kinship_method)
     else:
-        print(f'{qdim} is not a calculation method of kinship and a file')
+        raise f'{kinship_method} is not a calculation method of kinship and a file'
 print(f'kmatrix {kmatrix.shape}:')
 print(kmatrix[:5,:5])
 print(f'qmatrix {qmatrix.shape}:')
 print(qmatrix[:5,:5])
+
+if cov is not None:
+    if os.path.exists(cov):
+        cov = np.genfromtxt(cov,).reshape(-1,1)
+        print(f'covmatrix {cov.shape}:')
+        print(cov[:5,:5])
+        qmatrix = np.concatenate([qmatrix,cov],axis=1)
+    else:
+        raise f'{cov} is not a file'
 
 # sci_set()
 for i in pheno.columns:
@@ -179,22 +197,24 @@ for i in pheno.columns:
             # np.savetxt(f'{outfolder}/{i}.lbd',np.array(gwasmodel.lbd),fmt='%.4f')
         else:
             results = gwasmodel.gwas(snp=geno.values[famid_geno,:],chunksize=200_000,threads=threads) # gwas running...
-        results = pd.DataFrame(results,columns=['beta','se','p'],index=snp_chrloc[gwasmodel.snp_retain]).reset_index()
-        results_save = format_dataframe_for_export(results, scientific_cols=['p'], float_cols=['beta','se'])
+        results = pd.DataFrame(results,columns=['beta','se','af','p'],index=ref_alt.index[gwasmodel.snp_retain])
+        results = pd.concat([ref_alt.iloc[gwasmodel.snp_retain,:],results],axis=1)
+        results = results.reset_index()
+        results_save = format_dataframe_for_export(results, scientific_cols=['p'], float_cols=['beta','se','af'])
         results_save.to_csv(f'{outfolder}/{i}.tsv',sep='\t',index=False)
         print(f'Saved in {outfolder}/{i}.tsv'.replace('//','/'))
         
-        manhan = GWASPLOT(results,'#CHROM','POS','p')
-        plt.figure(figsize=(12,4),dpi=300)
-        ax1 = plt.subplot(1,2,1)
-        manhan.manhattan(-np.log10(0.05/results.shape[0]),ax=ax1)
-        ax2 = plt.subplot(1,2,2)
-        manhan.qq(ax=ax2)
-        plt.tight_layout()
-        print('Visualizing...')
-        plt.savefig(f'{outfolder}/{i}.png')
-        print(f'Saved in {outfolder}/{i}.png\n'.replace('//','/'))
-        del results,results_save,manhan,gwasmodel,p,famid_pheno,famid_geno
+        # manhan = GWASPLOT(results,'#CHROM','POS','p')
+        # plt.figure(figsize=(12,4),dpi=300)
+        # ax1 = plt.subplot(1,2,1)
+        # manhan.manhattan(-np.log10(0.05/results.shape[0]),ax=ax1)
+        # ax2 = plt.subplot(1,2,2)
+        # manhan.qq(ax=ax2)
+        # plt.tight_layout()
+        # print('Visualizing...')
+        # plt.savefig(f'{outfolder}/{i}.png')
+        # print(f'Saved in {outfolder}/{i}.png\n'.replace('//','/'))
+        del results,results_save,gwasmodel,p,famid_pheno,famid_geno
     else:
         print(f'Phenotype {i} has no overlapping samples with genotype, please check sample id. skipped.\n')
 lt = time.localtime()

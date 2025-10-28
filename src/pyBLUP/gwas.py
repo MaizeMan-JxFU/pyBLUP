@@ -17,9 +17,9 @@ class GWAS:
         :param kinship: Calculation method of kinship matrix nxn
         '''
         self.log = log
+        y = y.reshape(-1,1) # ensure the dim of y
         X = np.concatenate([np.ones((y.shape[0],1)),X],axis=1) if X is not None else np.ones((y.shape[0],1))
-        # simplify G matrix
-        self.D, self.S, self.Dh = np.linalg.svd(kinship + 1e-6 * np.eye(y.shape[0]))
+        self.D, self.S, self.Dh = np.linalg.svd(kinship + 1e-6 * np.eye(y.shape[0])) # simplify G matrix for solve inversed matrix
         del kinship
         del self.D
         self.Xcov = self.Dh@X
@@ -50,8 +50,8 @@ class GWAS:
             rTV_invr = V_inv * r.T@r
             log_detV = np.sum(np.log(V))
             sign, log_detXTV_invX = np.linalg.slogdet(XTV_invX)
-            total_log = (n-p)*np.log(rTV_invr) + log_detV + log_detXTV_invX
-            c = (n-p)*(np.log(n-p)-1-np.log(2*np.pi))/2 # Contant
+            total_log = (n-p)*np.log(rTV_invr) + log_detV + log_detXTV_invX # log items
+            c = (n-p)*(np.log(n-p)-1-np.log(2*np.pi))/2 # Constant
             return c - total_log / 2
         except Exception as e:
             print(f"REML error: {e}, lbd={lbd}")
@@ -74,8 +74,8 @@ class GWAS:
             rTV_invr = V_inv * r.T@r
             log_detV = np.sum(np.log(V))
             sign, log_detXTV_invX = np.linalg.slogdet(XTV_invX)
-            total_log = (n-p)*np.log(rTV_invr) + log_detV + log_detXTV_invX
-            c = (n-p)*(np.log(n-p)-1-np.log(2*np.pi))/2 # Contant
+            total_log = (n-p)*np.log(rTV_invr) + log_detV + log_detXTV_invX # log items
+            c = (n-p)*(np.log(n-p)-1-np.log(2*np.pi))/2 # Constant
             return c - total_log / 2
         except Exception as e:
             print(f"REML error: {e}, lbd={lbd}")
@@ -91,7 +91,7 @@ class GWAS:
         rTV_invr = V_inv * r.T@r
         sigma2 = rTV_invr/(n-p)
         se = np.sqrt(np.linalg.inv(XTV_invX/sigma2)[-1,-1])
-        return beta[-1,0],se
+        return beta[-1,0],se,np.mean(snp)/2
     def _HACfit(self,snp:np.ndarray=None):
         result = minimize_scalar(lambda lbd: -self._REML(10**(lbd),snp),bounds=self.bounds,method='bounded',options={'xatol': 1e-2, 'maxiter': 50},) # 寻找lbd 最大化似然函数
         lbd = self.lbd_null if not result.success else 10**(result.x[0,0])
@@ -105,7 +105,7 @@ class GWAS:
         rTV_invr = V_inv * r.T@r
         sigma2 = rTV_invr/(n-p)
         se = np.sqrt(np.linalg.inv(XTV_invX/sigma2)[-1,-1])
-        return beta[-1,0],se,lbd
+        return beta[-1,0],se,np.mean(snp)/2,lbd
     def gwas(self,snp:np.ndarray=None,chunksize=500_000,threads=-1):
         '''
         Speed version of mlm
@@ -116,9 +116,9 @@ class GWAS:
         :return: beta coefficients, standard errors and p-values for each SNP, np.ndarray
         '''
         num_snp = snp.shape[1]
-        chunk_indexs = [i for i in range(0,num_snp,chunksize)] # 速度换内存
+        chunk_indexs = [i for i in range(0,num_snp,chunksize)] # reduce the usage od memory
         chunk_indexs = chunk_indexs + [num_snp] if chunk_indexs[-1] != num_snp else chunk_indexs
-        beta_se_p = []
+        beta_se_af_p = []
         snp_retain = np.array([],dtype=bool)
         t_start = time.time()
         for ii in range(len(chunk_indexs)-1):
@@ -131,7 +131,7 @@ class GWAS:
                 return self._fit(snp_chunk[:, i])
             if snp_chunk.shape[1]>0:
                 results = np.array(Parallel(n_jobs=threads)(delayed(process_col)(i) for i in range(snp_chunk.shape[1])))
-                beta_se_p.append(np.concatenate([results,2*norm.sf(np.abs(results[:,0]/results[:,1])).reshape(-1,1)],axis=1))
+                beta_se_af_p.append(np.concatenate([results,2*norm.sf(np.abs(results[:,0]/results[:,1])).reshape(-1,1)],axis=1))
             if self.log:
                 iter_ratio = chunk_indexs[ii+1]/num_snp
                 time_cost = time.time()-t_start
@@ -142,7 +142,7 @@ class GWAS:
             del snp_chunk,results # 释放内存
         print()
         self.snp_retain = snp_retain
-        return np.concatenate(beta_se_p)
+        return np.concatenate(beta_se_af_p)
     def gwasHAC(self,snp:np.ndarray=None,chunksize=500_000,threads=-1):
         '''
         Speed version of mlm
@@ -154,9 +154,9 @@ class GWAS:
         '''
         lbds = []
         num_snp = snp.shape[1]
-        chunk_indexs = [i for i in range(0,num_snp,chunksize)] # 速度换内存
+        chunk_indexs = [i for i in range(0,num_snp,chunksize)] # reduce the usage od memory
         chunk_indexs = chunk_indexs + [num_snp] if chunk_indexs[-1] != num_snp else chunk_indexs
-        beta_se_p = []
+        beta_se_af_p = []
         snp_retain = np.array([],dtype=bool)
         t_start = time.time()
         for ii in range(len(chunk_indexs)-1):
@@ -173,8 +173,8 @@ class GWAS:
                 return self._HACfit(snp_chunk[:, i])
             if snp_chunk.shape[1]>0:
                 results = np.array(Parallel(n_jobs=threads)(delayed(process_col)(i) for i in range(snp_chunk.shape[1])))
-                beta_se_p.append(np.concatenate([results[:,[0,1]],2*norm.sf(np.abs(results[:,0]/results[:,1])).reshape(-1,1)],axis=1))
-                lbds.extend(results[:,2])
+                beta_se_af_p.append(np.concatenate([results[:,:-1],2*norm.sf(np.abs(results[:,0]/results[:,1])).reshape(-1,1)],axis=1))
+                lbds.extend(results[:,-1])
             if self.log:
                 iter_ratio = chunk_indexs[ii+1]/num_snp
                 time_cost = time.time()-t_start
@@ -182,12 +182,12 @@ class GWAS:
                 all_time_info = f'''{round(100*iter_ratio,2)}% (time cost: {round(time_cost/60,2)}/{round(time_left/60,2)} mins)'''
                 cpu,mem = get_process_info()
                 print(f'''\rCPU: {cpu}%, Memory: {round(mem,2)} G, Process: {all_time_info}''',end='')
-            del snp_chunk,results # 释放内存
+            del snp_chunk,results # release memory
             gc.collect()
         print()
         self.lbd = lbds
         self.snp_retain = snp_retain
-        return np.concatenate(beta_se_p)
+        return np.concatenate(beta_se_af_p)
     
 if __name__ == '__main__':
     pass

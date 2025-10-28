@@ -15,7 +15,7 @@ class BLUP:
         Z = Z if Z is not None else np.eye(y.shape[0]) # 设计矩阵 或 单位矩阵(一般没有重复则采用单位矩阵)
         assert M.shape[0] == Z.shape[1] # 随机效应和效应值相同
         self.X = np.concatenate([np.ones((y.shape[0],1)),cov],axis=1) if cov is not None else np.ones((y.shape[0],1)) # 设计矩阵 或 n1 向量
-        self.y = y
+        self.y = y.reshape(-1,1)
         self.M = M
         self.n = self.X.shape[0]
         self.p = self.X.shape[1]
@@ -66,4 +66,3 @@ class BLUP:
             return X@self.beta+G[self.n:, :self.n]@np.linalg.solve(self.G,self.u)
         else:
             return X@self.beta+M@self.u
-    
