@@ -1,3 +1,4 @@
+from lark import logger
 from pyBLUP import QK,GWAS
 from gfreader import breader,vcfreader
 from bioplotkit import GWASPLOT,sci_set
@@ -7,6 +8,7 @@ import numpy as np
 import argparse
 import time
 import socket
+import logging
 import sys
 import os
 def format_dataframe_for_export(df:pd.DataFrame, scientific_cols=None, float_cols=None):
@@ -28,8 +30,29 @@ def format_dataframe_for_export(df:pd.DataFrame, scientific_cols=None, float_col
             if col in df_export.columns and df_export[col].dtype in [np.float64, np.int64]:
                 df_export[col] = df_export[col].apply(lambda x: f"{x:.4f}")
     return df_export
-def green_output(string:str):
-    return f'\033[92m{string}\033[0m'
+def setup_logging(log_file_path):
+    """set logging"""
+    if os.path.exists(log_file_path) and log_file_path[-4:]=='.log':
+        os.remove(log_file_path)
+    # creart logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    # clean exist handler
+    logger.handlers.clear()
+    # set log format
+    formatter = logging.Formatter()
+    # file handler
+    file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    # handler of control panel
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+    # add handler to logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    return logger
 def main(log:bool=True):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     docfile = os.path.join(script_dir,'doc','demo.txt')
@@ -81,32 +104,34 @@ def main(log:bool=True):
         args.cov,
         str(args.AC)
     ]
+    # create log file
+    logger = setup_logging(f'''{args.out}/{gfile.replace('.vcf','').replace('.gz','').split('/')[-1]}.log'''.replace('//','/'))
+    logger.info('High Performance Linear Mixed Model Solver for Genome-Wide Association Studies')
+    logger.info(f'Host: {socket.gethostname()}\n')
     # Print configuration summary
     if log:
-        print("\n" + "="*60)
-        print("GWAS LMM SOLVER CONFIGURATION")
-        print("="*60)
-        print(f"Genotype file:    {gfile}")
-        print(f"Phenotype file:   {args.pheno}")
-        print(f"Output directory: {args.out}")
-        print(f"GRM method:       {args.grm}")
-        print(f"Q matrix:         {args.qcov}")
-        print(f"Covariant matrix: {args.cov}")
-        print(f"Threads:          {args.thread} ({'All cores' if args.thread == -1 else 'User specified'})")
-        print(f"HighAC mode:      {args.AC}")
-        print("="*60 + "\n")
+        logger.info("*"*60)
+        logger.info("GWAS LMM SOLVER CONFIGURATION")
+        logger.info("*"*60)
+        logger.info(f"Genotype file:    {gfile}")
+        logger.info(f"Phenotype file:   {args.pheno}")
+        logger.info(f"Output directory: {args.out}")
+        logger.info(f"GRM method:       {args.grm}")
+        logger.info(f"Q matrix:         {args.qcov}")
+        logger.info(f"Covariant matrix: {args.cov}")
+        logger.info(f"Threads:          {args.thread} ({'All cores' if args.thread == -1 else 'User specified'})")
+        logger.info(f"HighAC mode:      {args.AC}")
+        logger.info("*"*60 + "\n")
     
     # Create output directory if it doesn't exist
     if not os.path.exists(args.out):
         os.makedirs(args.out, mode=0o755)
         if log:
             print(f"Created output directory: {args.out}")
-    return gfile,args
+    return gfile,args,logger
 
 t = time.time()
-print(green_output('High Performance Linear Mixed Model Solver for Genome-Wide Association Studies'))
-print(green_output(f'Host: {socket.gethostname()}'),end='\n\n')
-gfile,args = main()
+gfile,args,logger = main()
 phenofile,outfolder = args.pheno,args.out
 kinship_method = args.grm
 qdim = args.qcov
@@ -120,89 +145,91 @@ if not os.path.exists(outfolder):
 prefix = gfile.replace('.vcf','').replace('.gz','')
 
 if args.vcf:
-    print(f'Loading genotype from {gfile}...')
+    logger.info(f'Loading genotype from {gfile}...')
     geno = vcfreader(rf'{gfile}') # VCF format
     ref_alt = geno.iloc[:,:2]
     geno = geno.iloc[:,2:].T 
 else:
-    print(f'Loading genotype from {gfile}.bed...')
+    logger.info(f'Loading genotype from {gfile}.bed...')
     geno = breader(rf'{gfile}') # PLINK format
     ref_alt = geno.iloc[:,:2]
     geno = geno.iloc[:,2:].T
 geno.index = geno.index.astype(str)
 famid = geno.index
-print(f'Loading phenotype from {phenofile}...')
+logger.info(f'Loading phenotype from {phenofile}...')
 pheno = pd.read_csv(rf'{phenofile}',sep='\t') # 第一列是样本ID, 第一行是表型名
 pheno = pheno.groupby(pheno.columns[0]).mean() # 重复样本表型取均值
 pheno.index = pheno.index.astype(str)
-print('Geno and Pheno are ready!')
+logger.info('Geno and Pheno are ready!')
 
 if qcal or kcal:
     if not os.path.exists(f'{prefix}.k.{kinship_method}.txt') or not os.path.exists(f'{prefix}.q.{qdim}.txt'):
         qkmodel = QK(geno.values,low_memory=True,log=True)
-        print('Samples and SNP:',geno.shape)
+        logger.info('Samples and SNP:',geno.shape)
     if os.path.exists(f'{prefix}.k.{kinship_method}.txt'):
-        print(f'* Loading GRM from {prefix}.k.{kinship_method}.txt...')
+        logger.info(f'* Loading GRM from {prefix}.k.{kinship_method}.txt...')
         kmatrix = pd.read_csv(f'{prefix}.k.{kinship_method}.txt',sep=r'\s+',header=None).values
     else:    
-        print(f'* Calculation method of kinship matrix is {kinship_method}')
+        logger.info(f'* Calculation method of kinship matrix is {kinship_method}')
         kmatrix = qkmodel.kinship(method=kinship_method)
         np.savetxt(f'{prefix}.k.{kinship_method}.txt',kmatrix,fmt='%.6f')
 
     if os.path.exists(f'{prefix}.q.{qdim}.txt'):
-        print(f'* Loading Q matrix from {prefix}.q.{qdim}.txt...')
+        logger.info(f'* Loading Q matrix from {prefix}.q.{qdim}.txt...')
         qmatrix = pd.read_csv(f'{prefix}.q.{qdim}.txt',sep=r'\s+',header=None).values
     else:    
-        print(f'* Dimension of PC for q matrix is {qdim}')
+        logger.info(f'* Dimension of PC for q matrix is {qdim}')
         qmatrix,eigenval = qkmodel.rpca(dim=int(qdim))
         np.savetxt(f'{prefix}.q.{qdim}.txt',qmatrix,fmt='%.6f')
 
 else:
     if not qcal and os.path.exists(qdim):
-        print(f'* Loading Q matrix from {qdim}...')
+        logger.info(f'* Loading Q matrix from {qdim}...')
         qmatrix = np.genfromtxt(qdim)
     else:
         raise f'{qdim} is not a number and a file'
     if not kcal and os.path.exists(kinship_method):
-        print(f'* Loading GRM from {kinship_method}...')
+        logger.info(f'* Loading GRM from {kinship_method}...')
         kmatrix = np.genfromtxt(kinship_method)
     else:
         raise f'{kinship_method} is not a calculation method of kinship and a file'
-print(f'kmatrix {kmatrix.shape}:')
-print(kmatrix[:5,:5])
-print(f'qmatrix {qmatrix.shape}:')
-print(qmatrix[:5,:5])
+logger.info(f'GRM {kmatrix.shape}:')
+logger.info(kmatrix[:5,:5])
+logger.info(f'Qmatrix {qmatrix.shape}:')
+logger.info(qmatrix[:5,:5])
 
 if cov is not None:
     if os.path.exists(cov):
         cov = np.genfromtxt(cov,).reshape(-1,1)
-        print(f'covmatrix {cov.shape}:')
-        print(cov[:5,:5])
+        logger.info(f'Covmatrix {cov.shape}:')
+        logger.info(cov[:5,:5])
         qmatrix = np.concatenate([qmatrix,cov],axis=1)
     else:
         raise f'{cov} is not a file'
 
 # sci_set()
 for i in pheno.columns:
-    print('*'*50)
+    t = time.time()
+    logger.info('*'*60)
     p = pheno[i].dropna()
     famid_pheno = [i for i in famid if i in p] # 对齐样本 以geno顺序为准
     famid_geno = [i for i in range(len(famid)) if famid[i] in famid_pheno] # 对齐样本 以geno顺序为准
     p = p.loc[famid_pheno].values.reshape(-1,1)
     if len(p)>0:
         gwasmodel = GWAS(y=p,X=qmatrix[famid_geno,:],kinship=kmatrix[famid_geno,:][:,famid_geno])
-        print(f'''phenotype:{i}, Number of samples:{len(famid_geno)}, Number of SNP:{geno.shape[1]}, pve of null:{round(gwasmodel.pve,3)}, high AC model: {HighAC}''')
+        logger.info(f'''Phenotype:{i}, Number of samples:{len(famid_geno)}, Number of SNP:{geno.shape[1]}, pve of null:{round(gwasmodel.pve,3)}, high AC model: {HighAC}''')
         if HighAC:
             results = gwasmodel.gwasHAC(snp=geno.values[famid_geno,:],chunksize=200_000,threads=threads) # gwas running...
             # np.savetxt(f'{outfolder}/{i}.lbd',np.array(gwasmodel.lbd),fmt='%.4f')
         else:
             results = gwasmodel.gwas(snp=geno.values[famid_geno,:],chunksize=200_000,threads=threads) # gwas running...
+        logger.info(f'Effective number of SNP: {results.shape[0]}')
         results = pd.DataFrame(results,columns=['beta','se','af','p'],index=ref_alt.index[gwasmodel.snp_retain])
         results = pd.concat([ref_alt.iloc[gwasmodel.snp_retain,:],results],axis=1)
         results = results.reset_index()
         results_save = format_dataframe_for_export(results, scientific_cols=['p'], float_cols=['beta','se','af'])
         results_save.to_csv(f'{outfolder}/{i}.tsv',sep='\t',index=False)
-        print(f'Saved in {outfolder}/{i}.tsv'.replace('//','/'))
+        logger.info(f'Saved in {outfolder}/{i}.tsv'.replace('//','/'))
         
         # manhan = GWASPLOT(results,'#CHROM','POS','p')
         # plt.figure(figsize=(12,4),dpi=300)
@@ -216,6 +243,8 @@ for i in pheno.columns:
         # print(f'Saved in {outfolder}/{i}.png\n'.replace('//','/'))
         del results,results_save,gwasmodel,p,famid_pheno,famid_geno
     else:
-        print(f'Phenotype {i} has no overlapping samples with genotype, please check sample id. skipped.\n')
+        logger.info(f'Phenotype {i} has no overlapping samples with genotype, please check sample id. skipped.\n')
+    logger.info(f'Time costed: {round(time.time()-t,2)} secs\n')
 lt = time.localtime()
-print(green_output(f'\nFinished, Total time: {round(time.time()-t,2)} secs\n{lt.tm_year}-{lt.tm_mon}-{lt.tm_mday} {lt.tm_hour}:{lt.tm_min}:{lt.tm_sec}'))
+endinfo = f'\nFinished, Total time: {round(time.time()-t,2)} secs\n{lt.tm_year}-{lt.tm_mon}-{lt.tm_mday} {lt.tm_hour}:{lt.tm_min}:{lt.tm_sec}'
+logger.info(endinfo)
