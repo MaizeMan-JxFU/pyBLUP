@@ -216,7 +216,7 @@ for i in pheno.columns:
     p = p.loc[famid_pheno].values.reshape(-1,1)
     if len(p)>0:
         gwasmodel = GWAS(y=p,X=qmatrix[famid_geno,:],kinship=kmatrix[famid_geno,:][:,famid_geno])
-        logger.info(f'''Phenotype:{i}, Number of samples:{len(famid_geno)}, Number of SNP:{geno.shape[1]}, pve of null:{round(gwasmodel.pve,3)}, high AC model: {HighAC}''')
+        logger.info(f'''Phenotype: {i}, Number of samples: {len(famid_geno)}, Number of SNP: {geno.shape[1]}, pve of null: {round(gwasmodel.pve,3)}, high AC model: {HighAC}''')
         if HighAC:
             results = gwasmodel.gwasHAC(snp=geno.values[famid_geno,:],chunksize=200_000,threads=threads) # gwas running...
             # np.savetxt(f'{outfolder}/{i}.lbd',np.array(gwasmodel.lbd),fmt='%.4f')
