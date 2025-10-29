@@ -22,18 +22,25 @@ y=X\beta+g+\epsilon \tag{2}
 
 &emsp;&emsp;基于广义最小二乘法，我们可以用$V$估计$\beta$,公式如下：
 
-$$\beta=(X'V^{-1}X)^{-1}X'V^{-1}y \tag{5}$$
+$$\hat{\beta}=(X'V^{-1}X)^{-1}X'V^{-1}y \tag{5}$$
 
 >**广义最小二乘法的推导**
-*定理1* 任意正定矩阵A都存在$A=L^HL$（QR分解）
-&emsp;&emsp;当 $y=X\beta+\epsilon$ ，$\epsilon \sim N(0,\sigma^{2} I)$，其中$I$是单位矩阵。则$\beta$的最小二乘估计公式 $\hat{\beta}=(X'X)^{-1}X'y$
-&emsp;&emsp;我们可以把混合线性模型同样视为 $y=X\beta+\epsilon$ 的形式，但此时 $\epsilon \sim N(0,\sigma^{2} \Sigma)$，其中$\Sigma$是随机因子的协方差矩阵，那么我们只需要对方程进行线性变换将$\Sigma$转变为单位矩阵则可以套用最小二乘估计的公式。根据定理1，可以将正定矩阵$\Sigma$分解成一对共轭矩阵$L$和$L^{H}$，随后对混合线性模型公式同乘L进行线性变换，即可将$\Sigma$转换为单位矩阵。
+*定理1* 任意正定矩阵A都存在$A=LL'$（Cholesky分解）
+当 $y=X\beta+\epsilon$ ，$\epsilon \sim N(0,\sigma^{2} I)$，其中$I$是单位矩阵。则$\beta$的最小二乘估计公式 $\hat{\beta}=(X'X)^{-1}X'y$
+我们可以把混合线性模型同样视为 $y=X\beta+\epsilon$ 的形式，但此时 $\epsilon \sim N(0,\sigma^{2} \Sigma)$，其中$\Sigma$是随机因子的协方差矩阵，那么我们只需要对方程进行线性变换将$\Sigma$转变为单位矩阵则可以套用最小二乘估计的公式。根据定理1，可以将正定矩阵$\Sigma$分解成可逆的上下三角矩阵$L$和$L'$，随后对混合线性模型公式同乘$L^{-1}$进行线性变换，即可将$\Sigma$转换为单位矩阵。推导如下：
 $$
-Ly=LX\beta+L\epsilon, L\epsilon \sim N(0,\sigma^) \\
-z
+\Sigma=LL' \\
+L^{-1}y=L^{-1}X\beta+L^{-1}\epsilon, L^{-1}\epsilon \sim N(0,\sigma^2 I) \\
+\hat{\beta}=((L^{-1}X)'(L^{-1}X))^{-1}(L^{-1}X)'L^{-1}y \\
+\hat{\beta}=(X'(L^{-1})'L^{-1}X)^{-1}X'(L^{-1})'L^{-1}y \\
+\because (L^{-1})'L^{-1}=\Sigma^{-1},\therefore \hat{\beta}=(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}y
 $$
 
 &emsp;&emsp;此时，需要估计的参数包括$\sigma_{g}^2、\lambda$，我们采用最大似然法对其进行估计，或者说我们将表型值向量$y$的多元正态分布的似然函数作为损失函数估计这两个未知参数。多元正态分布的限制性似然函数公式（推导较为复杂，直接上公式）如下：
+
+设$$r=(y-X\beta)'(y-X\beta)$$
+
+则$$x$$
 
 $$\sigma_{g}^2=\frac{r'V^{-1}r}{n-p} \tag{6}$$
 
