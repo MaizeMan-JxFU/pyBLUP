@@ -1,5 +1,7 @@
 # pyBLUP
 
+[English](./README.md) | [简体中文(推荐)](./doc/README_zh.md)
+
 ## Dependence
 
 >python: 3.9-3.13 (bed_reader is not compatible with python3.14)
