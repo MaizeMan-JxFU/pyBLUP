@@ -1,4 +1,3 @@
-from lark import logger
 from pyBLUP import QK,GWAS
 from gfreader import breader,vcfreader
 from bioplotkit import GWASPLOT,sci_set
