@@ -8,17 +8,17 @@
 
 &emsp;&emsp;GWAS中的混合线性模型如公式(1)所示，通常简写成公式(2)的形式。其中$X$是固定因子矩阵，包含1列全为1的固定截距向量以及多列固定因子向量（例如 群体结构、基因型），$\beta$是固定因子的效应值；$g$是个体随机因子，$g \sim N(0,\sigma_{g}^2 G)$，$G$是亲缘关系矩阵，可通过系谱关系或基因型计算获得；$\epsilon$是残差，$\epsilon \sim N(0,\sigma_{\epsilon}^2 I)$；y是表型向量，$y \sim N(X\beta,\sigma_{g}^2 G+\sigma_{\epsilon}^2 I)$
 
-$$y=\mu+X_{cov}\beta_{cov}+X_{snp}\beta_{snp}+g+\epsilon \tag{1}$$
+```math
+y=\mu+X_{cov}\beta_{cov}+X_{snp}\beta_{snp}+g+\epsilon \tag{1}
+```
 
-$$y=X\beta+g+\epsilon \tag{2}$$
+```math
+y=X\beta+g+\epsilon \tag{2}
+```
 
 &emsp;&emsp;其中需要估计的参数包括$\beta、\sigma_{g}^2、\sigma_{\epsilon}^2$。
 
-&emsp;&emsp;首先，我们设：
-
-$$\sigma_{\epsilon}^2=\lambda \sigma_{g}^2 \tag{3}$$
-
-$$V=G+\lambda I \tag{4}$$
+&emsp;&emsp;首先，我们设：$\sigma_{\epsilon}^2=\lambda \sigma_{g}^2$, $V=G+\lambda I $, 则 $y\sim N(X\beta,\sigma_{g}^2 V)$
 
 &emsp;&emsp;基于广义最小二乘法，我们可以用$V$估计$\beta$,公式如下：
 
