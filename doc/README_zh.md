@@ -2,11 +2,12 @@
 
 ## 引言
 
-&emsp;&emsp;近期需要分析海量基因型和表型数据，由于不满足于现有全基因组关联分析(GWAS)软件(GEMMA、GCTA、rMVP、TASSEL)的速度，因此尝试复现GWAS的混合线性模型算法优化计算速度。现有软件的问题主要在于跨平台困难(例如 GEMMA没有windows版本)、多核调用不积极(俗称1核有难，8核围观)、计算Q矩阵依赖其他软件等，我在算法复现中基本解决了上述问题。源代码已发布[github仓库](https://github.com/MaizeMan-JxFU/pyBLUP)，欢迎进行测试使用。
+&emsp;&emsp;随着基因组学研究的深入，海量基因型和表型数据的分析需求日益增长。现有全基因组关联分析(GWAS)软件如GEMMA、GCTA、rMVP和TASSEL等在处理大规模数据时存在一些局限性：GEMMA缺乏Windows版本，跨平台兼容性不足；多核并行计算效率低下；计算亲缘关系矩阵(Q矩阵)依赖外部工具等
+&emsp;&emsp;为解决这些问题，我们基于混合线性模型算法进行了深度优化，开发了pyBLUP工具。该工具在计算效率、跨平台兼容性和易用性方面均有显著提升。源代码已发布[Github仓库](https://github.com/MaizeMan-JxFU/pyBLUP)，欢迎进行测试使用。
 
-## 算法解析
+## 算法原理
 
-### 混合线性模型算法解析
+### 混合线性模型
 
 &emsp;&emsp;GWAS中的混合线性模型如公式(1)所示，通常简写成公式(2)的形式。其中$X$是固定因子矩阵，包含1列全为1的固定截距向量以及多列固定因子向量(例如 群体结构、基因型)，$\beta$是固定因子的效应值；$g$是个体随机因子，$g \sim N(0,\sigma_{g}^2 G)$，$G$是亲缘关系矩阵，可通过系谱关系或基因型计算获得；$\epsilon$ 是残差，$\epsilon \sim N(0,\sigma_{\epsilon}^2 I)$ ；y是表型向量，$y \sim N(X\beta,\sigma_{g}^2 G+\sigma_{\epsilon}^2 I)$
 
@@ -38,7 +39,7 @@ L^{-1}y=L^{-1}X\beta+L^{-1}\epsilon, L^{-1}\epsilon \sim N(0,\sigma^2 I) \\
 \because (L^{-1})'L^{-1}=\Sigma^{-1},\therefore \hat{\beta}=(X'\Sigma^{-1}X)^{-1}X'\Sigma^{-1}y
 $$
 
-&emsp;&emsp;此时，需要估计的参数包括 $\sigma_{g}^2、\lambda$ ，我们采用最大似然法对其进行估计，或者说我们将表型值向量$y$的多元正态分布的似然函数作为损失函数估计这两个未知参数。多元正态分布的限制性似然函数公式([推导](https://xiuming.info/docs/tutorials/reml.pdf)较为复杂，直接上公式)如下：
+&emsp;&emsp;此时，需要估计的参数包括 $\sigma_{g}^2、\lambda$ ，我们采用限制性最大似然法对其进行估计，或者说我们将表型值向量$y$的多元正态分布的似然函数作为损失函数估计这两个未知参数。多元正态分布的限制性似然函数公式([推导](https://xiuming.info/docs/tutorials/reml.pdf)较为复杂，直接上公式)如下：
 
 设
 
@@ -79,16 +80,48 @@ $$
 
 ### 主成分求解优化
 
-&emsp;&emsp;目前一般用 样本X基因型矩阵 的前几个主成分作为样本的群体结构加入到混合线性模型的固定效应部分。主成分可以通过SVD求解，但是存在的问题是矩阵维度过大的情况下，求解的速度极慢($O(n^3)$)。而往往我们不需要知道所有主成分，只需要特征值最大的前几个主成分。
-&emsp;&emsp;为了解决计算量过大的问题，前人提出了随机奇异值分解(RandomSVD)。对于任意矩阵 $A \in R^{m \multiply n}$ ，假定秩为 $k$，其中 $k<min\{m,n\}$，则随机奇异值分解的建模过程可分为三步。
-第一步包括三个小步，具体为：
+&emsp;&emsp;样本-基因型矩阵的主成分通常作为群体结构加入固定效应。传统SVD分解计算复杂度为$O(n^3)$，对于高维矩阵效率低下。随机奇异值分解(Random SVD)通过随机投影和子空间迭代，可高效计算前$k$个主成分，显著降低计算负担。
+
+## GWAS测试
+
+**对比软件**：[GEMMA](https://github.com/genetics-statistics/GEMMA)、GCTA以及rMVP
+**测试平台**：Ubuntu 22.04.5 LTS(x86_64), 2*Intel(R) Xeon(R) Gold 5318Y CPU @ 2.10GHz
+**测试数据集**: [RiceAtlas](http://60.30.67.242:18076/#/download)，表型
+**测试代码**：
+GEMMA:
+
+```bash
+gemma --bfile test --pheno test.pheno --gk --out gemma
+gemma --bfile test --pheno test.pheno --k out/gemma.cXX.txt --lmm --out gemma
+```
+
+GCTA:
+
+```bash
+gcta64 --bfile test --autosome --make-grm 1 --out gcta
+gcta64 --bfile test --pheno test.pheno --grm gcta --mlma --out gcta
+```
+
+pyBLUP:
+
+```bash
+GWAS gwas --bfile test ---pheno test.pheno --out .
+```
+
+### 准确性测试
+
+### 效率测试
+
+### 结论
+
+计算结果一致，但pyBLUP计算速度更快。
 
 ## 使用方法
 
 ### 安装
 
-&emsp;&emsp;首先需要环境中需要包含 [python](https://www.python.org/downloads/release/python-3139/) (3.9~3.13)
-&emsp;&emsp;如果有git基础，以下几行代码即可完成安装啦~
+首先需要环境中需要包含 [python](https://www.python.org/downloads/release/python-3139/) (3.9~3.13)
+如果有git基础，以下几行代码即可完成安装啦~
 
 ```bash
 # 网络顺畅的情况
@@ -101,7 +134,7 @@ cd pyBLUP
 pip install -r gwas.requirements.txt
 ```
 
-&emsp;&emsp;没有git基础，可以直接下载 [pyBLUP包文件](https://pan.baidu.com/s/1EibqB_xkuJSlnDM2LhArBA?pwd=TEMP)，解压后在终端进入pyBLUP文件夹，执行下列代码安装依赖
+没有git基础，可以直接下载 [pyBLUP包文件](https://pan.baidu.com/s/1EibqB_xkuJSlnDM2LhArBA?pwd=TEMP)，解压后在终端进入pyBLUP文件夹，执行下列代码安装依赖
 
 ```bash
 # 执行pip安装依赖
@@ -171,4 +204,4 @@ if __name__ == "__main__":
     GS_test() # test of GBLUP and rrBLUP
 ```
 
-更多用法可以访问Github仓库，仍在更新中...
+更多用法可以访问[Github仓库](https://github.com/MaizeMan-JxFU/pyBLUP)，仍在更新中...

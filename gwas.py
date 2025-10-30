@@ -69,10 +69,11 @@ def main(log:bool=True):
                            help='Input genotype files in PLINK binary format (prefix for .bed, .bim, .fam)')
     required_group.add_argument('--pheno', type=str, required=True,
                                help='Phenotype file (tab-delimited with sample IDs in first column)')
-    required_group.add_argument('--out', type=str, required=True,
-                               help='Output directory for results')
     # Optional arguments
     optional_group = parser.add_argument_group('Optional Arguments')
+    optional_group.add_argument('--out', type=str, default='test',
+                               help='Output directory for results'
+                                   '(default: %(default)s)')
     optional_group.add_argument('--grm', type=str,
                                default='VanRanden',
                                help='Kinship matrix calculation method or path to pre-calculated GRM file '
@@ -104,6 +105,8 @@ def main(log:bool=True):
         str(args.AC)
     ]
     # create log file
+    if not os.path.exists(args.out):
+        os.mkdir(args.out,0o755)
     logger = setup_logging(f'''{args.out}/{gfile.replace('.vcf','').replace('.gz','').split('/')[-1]}.log'''.replace('//','/'))
     logger.info('High Performance Linear Mixed Model Solver for Genome-Wide Association Studies')
     logger.info(f'Host: {socket.gethostname()}\n')
@@ -227,8 +230,8 @@ for i in pheno.columns:
         results = pd.concat([ref_alt.iloc[gwasmodel.snp_retain,:],results],axis=1)
         results = results.reset_index()
         results_save = format_dataframe_for_export(results, scientific_cols=['p'], float_cols=['beta','se','af'])
-        results_save.to_csv(f'{outfolder}/{i}.tsv',sep='\t',index=False)
-        logger.info(f'Saved in {outfolder}/{i}.tsv'.replace('//','/'))
+        results_save.to_csv(f'{outfolder}/{i}.assoc.tsv',sep='\t',index=False)
+        logger.info(f'Saved in {outfolder}/{i}.assoc.tsv'.replace('//','/'))
         
         manhan = GWASPLOT(results,'#CHROM','POS','p')
         plt.figure(figsize=(12,4),dpi=300)
