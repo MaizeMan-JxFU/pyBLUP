@@ -87,25 +87,125 @@ $$
 **对比软件**：[GEMMA](https://github.com/genetics-statistics/GEMMA)、GCTA以及rMVP
 **测试平台**：Ubuntu 22.04.5 LTS(x86_64), 2*Intel(R) Xeon(R) Gold 5318Y CPU @ 2.10GHz
 **测试数据集**: [RiceAtlas](http://60.30.67.242:18076/#/download)，表型
+**数据格式**：
+基因型属于plink标准格式
+表型格式如下，每列是不同样本，第二列~第n列是多种表型。\t 作为分隔符
+
+| samples | pheno_name |
+| :-----: | :------: |
+| indv1 | phenovalue 1 |
+| indv2 | phenovalue 2 |
+| ... | ... |
+| indvn | phenovalue n |
+
 **测试代码**：
 GEMMA:
 
 ```bash
-gemma --bfile test --pheno test.pheno --gk --out gemma
-gemma --bfile test --pheno test.pheno --k out/gemma.cXX.txt --lmm --out gemma
+# 表型预处理 去表头 创建双id
+awk -F "\t" {'print $1,$1,$2'} ~/data_pub/1.database/RiceAtlas/1.pheno.blup.tsv | tail +2 > data/test.pheno
+plink --bfile ~/data_pub/1.database/RiceAtlas/Rice6048 --pheno data/test.pheno --make-bed --out data/test
+# 测试
+time gemma -bfile data/test -gk -o gemma
+# GEMMA 0.98.5 (2021-08-25) by Xiang Zhou, Pjotr Prins and team (C) 2012-2021
+# Reading Files ... 
+# ## number of total individuals = 6048
+# ## number of analyzed individuals = 3487
+# ## number of covariates = 1
+# ## number of phenotypes = 1
+# ## number of total SNPs/var        =  5694922
+# ## number of analyzed SNPs         =  4832333
+# Calculating Relatedness Matrix ... 
+# ================================================== 100%
+# **** INFO: Done.
+
+# real    30m53.343s
+# user    1420m22.217s
+# sys     149m17.993s
+time ./gemma -bfile data/test -k output/gemma.cXX.txt 
+-lmm -o gemma
+# GEMMA 0.98.5 (2021-08-25) by Xiang Zhou, Pjotr Prins and team (C) 2012-2021
+# Reading Files ... 
+# ## number of total individuals = 6048
+# ## number of analyzed individuals = 3487
+# ## number of covariates = 1
+# ## number of phenotypes = 1
+# ## number of total SNPs/var        =  5694922
+# ## number of analyzed SNPs         =  4832333
+# Start Eigen-Decomposition...
+# pve estimate =0.524857
+# se(pve) =0.0538683
+# ================================================== 100%
+# **** INFO: Done.
+
+# real    191m25.075s
+# user    641m42.165s
+# sys     67m49.511s
 ```
 
 GCTA:
 
 ```bash
-gcta64 --bfile test --autosome --make-grm 1 --out gcta
-gcta64 --bfile test --pheno test.pheno --grm gcta --mlma --out gcta
+awk -F "\t" {'print $1,$1,$2'} ~/data_pub/1.database/RiceAtlas/1.pheno.blup.tsv | tail +2 > data/test.pheno
+# GCTA 支持多线程 --thread-num 92
+time gcta64 --bfile data/test --autosome --make-grm 1 --out gcta  --thread-num 92
+# *******************************************************************
+# * Genome-wide Complex Trait Analysis (GCTA)
+# * version v1.94.1 Linux
+# * Built at Nov 15 2022 21:14:25, by GCC 8.5
+# * (C) 2010-present, Yang Lab, Westlake University
+# * Please report bugs to Jian Yang <jian.yang@westlake.edu.cn>
+# *******************************************************************
+# Analysis started at 15:55:21 CST on Thu Oct 30 2025.
+# Hostname: user-NF5466M6
+
+# Options: 
+ 
+# --bfile data/test 
+# --autosome 
+# --make-grm 1 
+# --out gcta 
+# --thread-num 92 
+
+# The program will be running with up to 92 threads.
+# Note: GRM is computed using the SNPs on the autosomes.
+# Reading PLINK FAM file from [data/test.fam]...
+# 6048 individuals to be included from FAM file.
+# 6048 individuals to be included. 0 males, 0 females, 6048 unknown.
+# Reading PLINK BIM file from [data/test.bim]...
+# 5694922 SNPs to be included from BIM file(s).
+# Computing the genetic relationship matrix (GRM) v2 ...
+# Subset 1/1, no. subject 1-6048
+#   6048 samples, 5694922 markers, 18292176 GRM elements
+# IDs for the GRM file have been saved in the file [gcta.grm.id]
+# Computing GRM...
+#   23.0% Estimated time remaining 16.8 min
+#   65.3% Estimated time remaining 5.3 min
+#   100% finished in 789.4 sec
+# 5694922 SNPs have been processed.
+#   Used 5694922 valid SNPs.
+# The GRM computation is completed.
+# Saving GRM...
+# GRM has been saved in the file [gcta.grm.bin]
+# Number of SNPs in each pair of individuals has been saved in the file [gcta.grm.N.bin]
+
+# Analysis finished at 16:08:38 CST on Thu Oct 30 2025
+# Overall computational time: 13 minutes 16 sec.
+
+# real    13m16.721s
+# user    994m32.127s
+# sys     6m53.113s
+time gcta64 --bfile data/test --pheno data/test.pheno --grm gcta --mlma --out gcta  --thread-num 92
+
 ```
 
 pyBLUP:
 
 ```bash
-GWAS gwas --bfile test ---pheno test.pheno --out .
+# 表型预处理
+awk -F "\t" {'print $1,$1,$2'} ~/data_pub/1.database/RiceAtlas/1.pheno.blup.tsv > data/test.pheno
+# 默认开启所有线程 保持和GCTA一致 使用 --thread 92. 和其他方法保持一致不适用q矩阵
+GWAS gwas --bfile test ---pheno test.pheno --out . --thread 92 --qdim 0
 ```
 
 ### 准确性测试
