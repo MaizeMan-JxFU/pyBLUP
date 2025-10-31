@@ -168,7 +168,7 @@ pheno.index = pheno.index.astype(str)
 logger.info('Geno and Pheno are ready!')
 
 if qcal or kcal:
-    if not os.path.exists(f'{prefix}.k.{kinship_method}.txt') or not os.path.exists(f'{prefix}.q.{qdim}.txt'):
+    if not os.path.exists(f'{prefix}.k.{kinship_method}.txt') or not os.path.exists(f'{prefix}.q.{qdim}.txt') and int(qdim)!=0:
         qkmodel = QK(geno.values,low_memory=True,log=True)
         logger.info(f'Samples and SNP: {geno.shape}')
     if os.path.exists(f'{prefix}.k.{kinship_method}.txt'):
