@@ -13,18 +13,28 @@ set "MODULE_test=test.py"
 if "%1"=="" goto show_help
 if "%1"=="-h" goto show_help
 if "%1"=="--help" goto show_help
-
 set "MODULE_NAME=%1"
 shift
 
 rem Check if module exists and execute corresponding script
+
 if defined MODULE_%MODULE_NAME% (
     set "SCRIPT_FILE=!MODULE_%MODULE_NAME%!"
-    call .venv\Scripts\python -u "%PWD_DIR%\module\!SCRIPT_FILE!" %*
-) else (
-    echo Error: unknown module '%MODULE_NAME%'!
-    echo Available modules: gwas test
-    exit /b 1
+    
+    rem 手动构建新的参数列表
+    set "NEW_ARGS="
+    :build_args
+    if "%~1"=="" goto execute_script
+    if defined NEW_ARGS (
+        set "NEW_ARGS=!NEW_ARGS! %1"
+    ) else (
+        set "NEW_ARGS=%1"
+    )
+    shift
+    goto build_args
+
+    :execute_script
+    call %PWD_DIR%\.venv\Scripts\python -u "%PWD_DIR%\module\!SCRIPT_FILE!" !NEW_ARGS!
 )
 
 exit /b 0

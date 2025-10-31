@@ -1,6 +1,10 @@
+echo "Process of install..."
+PWD_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 pip install uv
 uv venv
 uv sync
 uv pip install -r gwas.requirements.txt
-cp ./doc/unix.sh GWAS.sh
-chmod +x GWAS.sh
+cp ./doc/unix.sh GWAS
+chmod +x GWAS
+echo "Completed! please add $PWD_DIR to your enviroment"
+echo "echo $PWD_DIR >> ~/.bashrc; source ~/.bashrc"
