@@ -79,8 +79,8 @@ print(results)
 git clone https://github.com/MaizeMan-JxFU/pyBLUP.git
 cd pyBLUP
 # .\install.bat # windows
-./install.sh # windows
-./GWAS gwas --vcf example/mouse_hs1940.vcf.gz --pheno example/mouse_hs1940.pheno --out test # test
+./install.sh # unix
+GWAS gwas --vcf example/mouse_hs1940.vcf.gz --pheno example/mouse_hs1940.pheno --out test # test
 ```
 
 ![manhanden&qq](./fig/test0.png "Simple visualization")
