@@ -76,11 +76,11 @@ print(results)
 ### CLI usage of GWAS
 
 ```shell
-git clone https://github.com/MaizeMan-JxFU/pyBLUP.git; cd pyBLUP
-pip install -r gwas.requirements.txt # gfreader, bioplotkit, pyBLUP for gwas cli
-# python gwas.py -h
-python gwas.py --vcf example/mouse_hs1940.vcf.gz --pheno example/mouse_hs1940.pheno --out test # windows & unix
-chmod +755 GWAS; GWAS gwas --vcf example/mouse_hs1940.vcf.gz --pheno example/mouse_hs1940.pheno --out test # unix
+git clone https://github.com/MaizeMan-JxFU/pyBLUP.git
+cd pyBLUP
+# .\install.bat # windows
+./install.sh # windows
+./GWAS gwas --vcf example/mouse_hs1940.vcf.gz --pheno example/mouse_hs1940.pheno --out test # test
 ```
 
 ![manhanden&qq](./fig/test0.png "Simple visualization")

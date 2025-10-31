@@ -1,3 +1,4 @@
+from ast import parse
 from pyBLUP import QK,GWAS
 from gfreader import breader,vcfreader
 from bioplotkit import GWASPLOT,sci_set
@@ -54,7 +55,7 @@ def setup_logging(log_file_path):
     return logger
 def main(log:bool=True):
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    docfile = os.path.join(script_dir,'doc','demo.txt')
+    docfile = os.path.join(script_dir,'../doc','demo.txt')
     doc = open(docfile, 'r',).read()
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -107,7 +108,9 @@ def main(log:bool=True):
     # create log file
     if not os.path.exists(args.out):
         os.mkdir(args.out,0o755)
-    logger = setup_logging(f'''{args.out}/{gfile.replace('.vcf','').replace('.gz','').split('/')[-1]}.log'''.replace('//','/'))
+    
+    filename = os.path.basename(gfile)
+    logger = setup_logging(f'''{args.out}/{filename.replace('.vcf','').replace('.gz','')}.log'''.replace('//','/'))
     logger.info('High Performance Linear Mixed Model Solver for Genome-Wide Association Studies')
     logger.info(f'Host: {socket.gethostname()}\n')
     # Print configuration summary
@@ -167,7 +170,7 @@ logger.info('Geno and Pheno are ready!')
 if qcal or kcal:
     if not os.path.exists(f'{prefix}.k.{kinship_method}.txt') or not os.path.exists(f'{prefix}.q.{qdim}.txt'):
         qkmodel = QK(geno.values,low_memory=True,log=True)
-        logger.info('Samples and SNP:',geno.shape)
+        logger.info(f'Samples and SNP: {geno.shape}')
     if os.path.exists(f'{prefix}.k.{kinship_method}.txt'):
         logger.info(f'* Loading GRM from {prefix}.k.{kinship_method}.txt...')
         kmatrix = pd.read_csv(f'{prefix}.k.{kinship_method}.txt',sep=r'\s+',header=None).values
@@ -179,10 +182,13 @@ if qcal or kcal:
     if os.path.exists(f'{prefix}.q.{qdim}.txt'):
         logger.info(f'* Loading Q matrix from {prefix}.q.{qdim}.txt...')
         qmatrix = pd.read_csv(f'{prefix}.q.{qdim}.txt',sep=r'\s+',header=None).values
-    else:    
-        logger.info(f'* Dimension of PC for q matrix is {qdim}')
-        qmatrix,eigenval = qkmodel.rpca(dim=int(qdim))
-        np.savetxt(f'{prefix}.q.{qdim}.txt',qmatrix,fmt='%.6f')
+    else:
+        if int(qdim) > 0:
+            logger.info(f'* Dimension of PC for q matrix is {qdim}')
+            qmatrix,eigenval = qkmodel.rpca(dim=int(qdim))
+            np.savetxt(f'{prefix}.q.{qdim}.txt',qmatrix,fmt='%.6f')
+        else:
+            qmatrix = np.array([]).reshape(geno.shape[0],0)
 
 else:
     if not qcal and os.path.exists(qdim):
@@ -195,9 +201,9 @@ else:
         kmatrix = np.genfromtxt(kinship_method)
     else:
         raise f'{kinship_method} is not a calculation method of kinship and a file'
-logger.info(f'GRM {kmatrix.shape}:')
+logger.info(f'GRM {str(kmatrix.shape)}:')
 logger.info(kmatrix[:5,:5])
-logger.info(f'Qmatrix {qmatrix.shape}:')
+logger.info(f'Qmatrix {str(qmatrix.shape)}:')
 logger.info(qmatrix[:5,:5])
 
 if cov is not None:
@@ -208,7 +214,6 @@ if cov is not None:
         qmatrix = np.concatenate([qmatrix,cov],axis=1)
     else:
         raise f'{cov} is not a file'
-
 # sci_set()
 for i in pheno.columns:
     t = time.time()

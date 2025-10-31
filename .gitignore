@@ -2,8 +2,14 @@
 example/*.q.*
 example/*.k.*
 # ignore build folder
-dist/*
+dist
 # ignore test folder
 test/*
 # ignore vscode settings folder
 .vscode/*
+# uv related
+.venv/
+uv.lock
+GWAS.bat
+GWAS.sh
+src/pyBLUP/__pycache__

@@ -196,16 +196,112 @@ time gcta64 --bfile data/test --autosome --make-grm 1 --out gcta  --thread-num 9
 # user    994m32.127s
 # sys     6m53.113s
 time gcta64 --bfile data/test --pheno data/test.pheno --grm gcta --mlma --out gcta  --thread-num 92
+# *******************************************************************
+# * Genome-wide Complex Trait Analysis (GCTA)
+# * version v1.94.1 Linux
+# * Built at Nov 15 2022 21:14:25, by GCC 8.5
+# * (C) 2010-present, Yang Lab, Westlake University
+# * Please report bugs to Jian Yang <jian.yang@westlake.edu.cn>
+# *******************************************************************
+# Analysis started at 16:19:06 CST on Thu Oct 30 2025.
+# Hostname: user-NF5466M6
 
+# Accepted options:
+# --bfile data/test
+# --pheno data/test.pheno
+# --grm gcta
+# --mlma 
+# --out gcta
+# --thread-num 92
+
+# Note: the program will be running on 92 threads.
+
+# Reading PLINK FAM file from [data/test.fam].
+# 6048 individuals to be included from [data/test.fam].
+# Reading PLINK BIM file from [data/test.bim].
+# 5694922 SNPs to be included from [data/test.bim].
+# Reading PLINK BED file from [data/test.bed] in SNP-major format ...
+# Genotype data for 6048 individuals and 5694922 SNPs to be included from [data/test.bed].
+# Reading phenotypes from [data/test.pheno].
+# Non-missing phenotypes of 3487 individuals are included from [data/test.pheno].
+# Reading IDs of the GRM from [gcta.grm.id].
+# 6048 IDs are read from [gcta.grm.id].
+# Reading the GRM from [gcta.grm.bin].
+# GRM for 6048 individuals are included from [gcta.grm.bin].
+# 3487 individuals are in common in these files.
+
+# Performing MLM association analyses (including the candidate SNP) ...
+
+# Performing  REML analysis ... (Note: may take hours depending on sample size).
+# 3487 observations, 1 fixed effect(s), and 2 variance component(s)(including residual variance).
+# Calculating prior values of variance components by EM-REML ...
+# Updated prior values: 121.369 128.583
+# logL: -11046.3
+# Running AI-REML algorithm ...
+# Iter.   logL    V(G)    V(e)
+# 1       -11028.78       127.62465       129.37499
+# 2       -11026.69       132.87349       129.65568
+# 3       -11025.57       137.22864       129.61548
+# 4       -11024.97       140.81534       129.38948
+# 5       -11024.63       150.11953       128.37421
+# 6       -11024.20       153.88104       127.03504
+# 7       -11024.14       155.59620       126.40843
+# 8       -11024.13       156.37140       126.12474
+# 9       -11024.13       156.71952       125.99722
+# 10      -11024.13       156.87542       125.94010
+# 11      -11024.13       156.94514       125.91454
+# 12      -11024.13       156.97631       125.90312
+# 13      -11024.13       156.99023       125.89801
+# Log-likelihood ratio converged.
+# Calculating allele frequencies ...
+
+# Running association tests for 5694922 SNPs ...
+# ^C
+
+# real    978m5.950s
+# user    999m5.255s
+# sys     60m27.973s
 ```
 
 pyBLUP:
 
 ```bash
 # 表型预处理
-awk -F "\t" {'print $1,$1,$2'} ~/data_pub/1.database/RiceAtlas/1.pheno.blup.tsv > data/test.pheno
-# 默认开启所有线程 保持和GCTA一致 使用 --thread 92. 和其他方法保持一致不适用q矩阵
-GWAS gwas --bfile test ---pheno test.pheno --out . --thread 92 --qdim 0
+awk -F "\t" {'print $1,$2'} ~/data_pub/1.database/RiceAtlas/1.pheno.blup.tsv > data/test.pheno
+# 默认开启所有线程 保持和GCTA一致 使用 --thread 92. 和其他方法保持一致不使用q矩阵
+GWAS gwas --bfile data/test --pheno data/test.pheno --out . --thread 92 --qcov 0
+# High Performance Linear Mixed Model Solver for Genome-Wide Association Studies
+# Host: user-NF5466M6
+
+# ************************************************************
+# GWAS LMM SOLVER CONFIGURATION
+# ************************************************************
+# Genotype file:    data/test
+# Phenotype file:   data/test.pheno
+# Output directory: .
+# GRM method:       VanRanden
+# Q matrix:         0
+# Covariant matrix: None
+# Threads:          92 (User specified)
+# HighAC mode:      True
+# ************************************************************
+
+# Loading genotype from data/test.bed...
+# Loading phenotype from data/test.pheno...
+# Geno and Pheno are ready!
+# * Calculation method of kinship matrix is VanRanden
+# * Dimension of PC for q matrix is 0
+# GRM (6048, 6048):
+# [[1.3707275  0.8874752  0.8883423  0.89439726 0.8315204 ]
+#  [0.8874752  1.3321023  1.0507029  0.9417346  0.9758807 ]
+#  [0.8883423  1.0507029  1.3232387  1.0112458  1.1409674 ]
+#  [0.89439726 0.9417346  1.0112458  1.3440443  0.99946934]
+#  [0.8315204  0.9758807  1.1409674  0.99946934 1.3501267 ]]
+# Qmatrix (6048, 0):
+# []
+
+# Finished, Total time: 6424.28 secs
+# 2025-10-31 10:33:24
 ```
 
 ### 准确性测试
@@ -215,6 +311,7 @@ GWAS gwas --bfile test ---pheno test.pheno --out . --thread 92 --qdim 0
 ### 结论
 
 计算结果一致，但pyBLUP计算速度更快。
+那么pyBLUP是完美的吗？当然不是，他的缺点是内存占用显著高于现有的软件，$M_{1000 \times 1000000}$的矩阵内存占用高达xxx。此外随着个体数的增加，初始化时间（SVD）将会显著增长。而杨剑等的fast-gwa在2019年就实现了算法改进，使其GWAS模型适用于百万级个体的关联分析。
 
 ## 使用方法
 
@@ -305,3 +402,4 @@ if __name__ == "__main__":
 ```
 
 更多用法可以访问[Github仓库](https://github.com/MaizeMan-JxFU/pyBLUP)，仍在更新中...
+更新计划：重写bed_reader函数，获得更高效的基因型编码方式，从而降低内存占用；优化biokitplot中的GWASplot函数，使其绘制千万级别位点的速度更快、内存占用更低。混合线性模型中加入牛顿法，解决多随机效应方差估计的问题（目前pyBLUP只能引入单一随机效应，例如亲缘关系）。
