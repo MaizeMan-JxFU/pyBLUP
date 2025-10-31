@@ -22,7 +22,7 @@ shift  # remove parameter of module name
 
 if [[ -n "${MODULES[$MODULE_NAME]}" ]]; then
     SCRIPT_FILE="${MODULES[$MODULE_NAME]}"
-    $PWD_DIR/.venv/Scripts/python -u "$PWD_DIR/module/$SCRIPT_FILE" "$@"
+    $PWD_DIR/.venv/bin/python -u "$PWD_DIR/module/$SCRIPT_FILE" "$@"
 else
     echo -e "\\e[31mError: unknown module '$MODULE_NAME'!\\e[0m"
     echo -e "\\e[31mModule: ${!MODULES[*]}\\e[0m"
