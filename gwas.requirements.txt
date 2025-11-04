@@ -1,3 +1,0 @@
-.
-bioplotkit==1.0.0 # plot package
-gfreader==1.0.2 # genetic data reader package
