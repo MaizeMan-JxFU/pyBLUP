@@ -105,7 +105,7 @@ class GWAS:
         rTV_invr = V_inv * r.T@r
         sigma2 = rTV_invr/(n-p)
         se = np.sqrt(np.linalg.inv(XTV_invX/sigma2)[-1,-1])
-        return beta[-1,0],se,np.mean(snp>=0)/2,lbd
+        return beta[-1,0],se,np.mean(snp[snp>=0])/2,lbd
     def gwas(self,snp:np.ndarray=None,chunksize=500_000,threads=-1):
         '''
         Speed version of mlm
