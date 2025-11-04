@@ -91,7 +91,7 @@ class GWAS:
         rTV_invr = V_inv * r.T@r
         sigma2 = rTV_invr/(n-p)
         se = np.sqrt(np.linalg.inv(XTV_invX/sigma2)[-1,-1])
-        return beta[-1,0],se,np.mean(snp)/2
+        return beta[-1,0],se,np.mean(snp[snp>=0])/2
     def _HACfit(self,snp:np.ndarray=None):
         result = minimize_scalar(lambda lbd: -self._REML(10**(lbd),snp),bounds=self.bounds,method='bounded',options={'xatol': 1e-2, 'maxiter': 50},) # 寻找lbd 最大化似然函数
         lbd = self.lbd_null if not result.success else 10**(result.x[0,0])
@@ -105,7 +105,7 @@ class GWAS:
         rTV_invr = V_inv * r.T@r
         sigma2 = rTV_invr/(n-p)
         se = np.sqrt(np.linalg.inv(XTV_invX/sigma2)[-1,-1])
-        return beta[-1,0],se,np.mean(snp)/2,lbd
+        return beta[-1,0],se,np.mean(snp>=0)/2,lbd
     def gwas(self,snp:np.ndarray=None,chunksize=500_000,threads=-1):
         '''
         Speed version of mlm
