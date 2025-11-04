@@ -91,7 +91,7 @@ class GWAS:
         rTV_invr = V_inv * r.T@r
         sigma2 = rTV_invr/(n-p)
         se = np.sqrt(np.linalg.inv(XTV_invX/sigma2)[-1,-1])
-        return beta[-1,0],se,np.mean(snp[snp>=0])/2
+        return beta[-1,0],se
     def _HACfit(self,snp:np.ndarray=None):
         result = minimize_scalar(lambda lbd: -self._REML(10**(lbd),snp),bounds=self.bounds,method='bounded',options={'xatol': 1e-2, 'maxiter': 50},) # 寻找lbd 最大化似然函数
         lbd = self.lbd_null if not result.success else 10**(result.x[0,0])
@@ -105,7 +105,7 @@ class GWAS:
         rTV_invr = V_inv * r.T@r
         sigma2 = rTV_invr/(n-p)
         se = np.sqrt(np.linalg.inv(XTV_invX/sigma2)[-1,-1])
-        return beta[-1,0],se,np.mean(snp[snp>=0])/2,lbd
+        return beta[-1,0],se,lbd
     def gwas(self,snp:np.ndarray=None,chunksize=500_000,threads=-1):
         '''
         Speed version of mlm
@@ -125,13 +125,14 @@ class GWAS:
             snp_chunk = snp[:,chunk_indexs[ii]:chunk_indexs[ii+1]].astype(np.float32)
             qc = QC(snp_chunk)
             snp_chunk = qc.simple_QC()
+            maf:np.ndarray = np.mean(snp_chunk,axis=0)/2
             snp_retain = np.append(snp_retain,qc.SNP_retain)
             snp_chunk = self.Dh@snp_chunk
             def process_col(i):
                 return self._fit(snp_chunk[:, i])
             if snp_chunk.shape[1]>0:
                 results = np.array(Parallel(n_jobs=threads)(delayed(process_col)(i) for i in range(snp_chunk.shape[1])))
-                beta_se_af_p.append(np.concatenate([results,2*norm.sf(np.abs(results[:,0]/results[:,1])).reshape(-1,1)],axis=1))
+                beta_se_af_p.append(np.concatenate([results,maf.reshape(-1,1),2*norm.sf(np.abs(results[:,0]/results[:,1])).reshape(-1,1)],axis=1))
             if self.log:
                 iter_ratio = chunk_indexs[ii+1]/num_snp
                 time_cost = time.time()-t_start
@@ -164,6 +165,7 @@ class GWAS:
             snp_chunk = snp[:,chunk_indexs[ii]:chunk_indexs[ii+1]].astype(np.float32)
             qc = QC(snp_chunk)
             snp_chunk = qc.simple_QC()
+            maf:np.ndarray = np.mean(snp_chunk,axis=0)/2
             snp_retain = np.append(snp_retain,qc.SNP_retain)
             snp_chunk = self.Dh@snp_chunk
             def process_col(i):
@@ -173,7 +175,7 @@ class GWAS:
                 return self._HACfit(snp_chunk[:, i])
             if snp_chunk.shape[1]>0:
                 results = np.array(Parallel(n_jobs=threads)(delayed(process_col)(i) for i in range(snp_chunk.shape[1])))
-                beta_se_af_p.append(np.concatenate([results[:,:-1],2*norm.sf(np.abs(results[:,0]/results[:,1])).reshape(-1,1)],axis=1))
+                beta_se_af_p.append(np.concatenate([results[:,:-1],maf.reshape(-1,1),2*norm.sf(np.abs(results[:,0]/results[:,1])).reshape(-1,1)],axis=1))
                 lbds.extend(results[:,-1])
             if self.log:
                 iter_ratio = chunk_indexs[ii+1]/num_snp
