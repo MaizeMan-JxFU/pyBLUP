@@ -1,5 +1,6 @@
 import numpy as np
 import time
+import gc
 from .QC import QC
 
 class QK:
@@ -32,6 +33,7 @@ class QK:
             self.Mstd.extend(M_chunk.std(axis=0))
             _.append(M_chunk)
             del M_chunk
+            gc.collect()
             if self.log:
                 iter_ratio = chunk_indexs[ii+1]/m
                 time_cost = time.time()-t_start
