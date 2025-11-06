@@ -1,8 +1,7 @@
 import numpy as np
 import time
+from .QC import simple_QC
 import gc
-from .QC import QC
-
 class QK:
     def __init__(self,M:np.ndarray,chunksize:int=500_000,low_memory: bool=True,log:bool=False):
         '''
@@ -15,40 +14,48 @@ class QK:
         self.log = log
         n,m = M.shape
         self.chunksize = chunksize
-        chunk_indexs = [i for i in range(0,m,chunksize)] # 内存换速度
-        chunk_indexs = chunk_indexs + [m] if chunk_indexs[-1] != m else chunk_indexs
-        self.p_i = []
-        self.Mmean = []
-        self.Mstd = []
-        self.SNP_retain = []
-        _ = []
+        
+        self.p_i = np.zeros(m, dtype=np.float32)
+        self.Mmean = np.zeros(m, dtype=np.float32)
+        self.Mstd = np.zeros(m, dtype=np.float32)
+        if low_memory:
+            self.M = np.zeros((n,m), dtype=np.int8)
+        else:
+            self.M = np.zeros((n,m), dtype=np.float32)
+        retained_snps = 0
+        
         t_start = time.time()
-        for ii in range(len(chunk_indexs)-1):
-            M_chunk = M.copy()[:,chunk_indexs[ii]:chunk_indexs[ii+1]] if low_memory else M[:,chunk_indexs[ii]:chunk_indexs[ii+1]].astype(np.float32)
-            qc = QC(M_chunk)
-            M_chunk = qc.simple_QC()
-            self.SNP_retain.extend(qc.SNP_retain)
-            self.p_i.extend((M_chunk.sum(axis=0)+1)/(2*n+2))
-            self.Mmean.extend(M_chunk.mean(axis=0))
-            self.Mstd.extend(M_chunk.std(axis=0))
-            _.append(M_chunk)
-            del M_chunk
+        for ii in range(0,m,chunksize):
             gc.collect()
+            end_idx = min(ii + chunksize, m)
+            M_chunk = M[:,ii:end_idx].astype(np.float32,copy=False)
+            M_chunk,SNP_retain_sub = simple_QC(M_chunk)
+            chunk_size_retained = sum(SNP_retain_sub)
+            if chunk_size_retained > 0:
+                idx_slice = slice(retained_snps, retained_snps + chunk_size_retained)
+                self.p_i[idx_slice] = (M_chunk.sum(axis=0)+1)/(2*n+2)
+                self.Mmean[idx_slice] = M_chunk.mean(axis=0)
+                self.Mstd[idx_slice] = M_chunk.std(axis=0)
+                self.M[:,idx_slice] = M_chunk
+                retained_snps += chunk_size_retained
             if self.log:
-                iter_ratio = chunk_indexs[ii+1]/m
+                iter_ratio = end_idx/m
                 time_cost = time.time()-t_start
                 time_left = time_cost/iter_ratio
                 all_time_info = f'''{round(100*iter_ratio,2)}% (time cost: {round(time_cost/60,2)}/{round(time_left/60,2)} mins)'''
                 print(f'''\rInitialization of loading and QC: {all_time_info}''',end='')
+            del M_chunk
+            gc.collect()
         if self.log:
             print()
         del M
-        self.M = np.concatenate(_,axis=1)
-        del _
-        self.p_i = np.array(self.p_i,dtype=np.float32)
+        gc.collect()
+        # 截断数组到实际大小
+        self.p_i = self.p_i[:retained_snps]
+        self.Mmean = self.Mmean[:retained_snps]
+        self.Mstd = self.Mstd[:retained_snps]
         self.std = np.sqrt(2 * self.p_i * (1 - self.p_i))
-        self.Mmean = np.array(self.Mmean,dtype=np.float32)
-        self.Mstd = np.array(self.Mstd,dtype=np.float32)
+        self.M = self.M[:,:retained_snps]
     def _k(self, Msub:np.ndarray=None,method:str='VanRanden'):
         if method == 'VanRanden':
             Z:np.ndarray = Msub - 2*self.p_i
@@ -62,7 +69,7 @@ class QK:
             return Z@Z.T/Z.shape[1]
         elif method == 'pearson':
             return np.corrcoef(Msub)
-    def kinship(self,split_num:int=15,method:str='VanRanden'):
+    def kinship(self,split_num:int=10,method:str='VanRanden'):
         '''
         :param split_num: int
         :param method: str {'VanRanden', 'gemma1', 'gemma2', 'pearson'}
@@ -96,7 +103,7 @@ class QK:
         M = (self.M - 2*self.p_i)/np.sqrt(2*self.p_i*(1-self.p_i)) # standard M matrix
         eigenvec, eigenval, Vh = np.linalg.svd(M,full_matrices=False)
         return eigenvec, eigenval
-    def rpca(self, dim=10, iter_num=5, chunk_size=1000):
+    def rpca(self, dim=10, iter_num=5, chunk_size=5_000):
         '''
         random SVD
         

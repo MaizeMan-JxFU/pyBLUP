@@ -4,7 +4,7 @@ from scipy.stats import norm
 from joblib import Parallel, delayed # for parallel processing
 import gc # garbage collection
 import time
-from .QC import QC
+from .QC import simple_QC
 from .cpu_inspect import get_process_info
 
 class GWAS:
@@ -24,7 +24,7 @@ class GWAS:
         del self.D
         self.Xcov = self.Dh@X
         self.y = self.Dh@y
-        result = minimize_scalar(lambda lbd: -self._NULLREML(10**(lbd)),bounds=(-6,6),method='bounded',options={'xatol': 1e-6},)
+        result = minimize_scalar(lambda lbd: -self._NULLREML(10**(lbd)),bounds=(-8,8),method='bounded',options={'xatol': 1e-3},)
         lbd_null = 10**(result.x[0,0])
         vg_null = np.mean(self.S)
         pve = vg_null/(vg_null+lbd_null)
@@ -42,10 +42,7 @@ class GWAS:
             X_cov_snp = self.Xcov
             XTV_invX = V_inv*X_cov_snp.T @ X_cov_snp
             XTV_invy = V_inv*X_cov_snp.T @ self.y
-            try:
-                beta = np.linalg.solve(XTV_invX, XTV_invy)
-            except np.linalg.LinAlgError:
-                beta = np.linalg.solve(XTV_invX+1e-6*np.eye(XTV_invX.shape[0]),XTV_invy)
+            beta = np.linalg.solve(XTV_invX, XTV_invy)
             r = self.y - X_cov_snp@beta
             rTV_invr = V_inv * r.T@r
             log_detV = np.sum(np.log(V))
@@ -55,7 +52,7 @@ class GWAS:
             return c - total_log / 2
         except Exception as e:
             print(f"REML error: {e}, lbd={lbd}")
-            return -1e12
+            return -1e8
     def _REML(self,lbd: float, snp_vec:np.array):
         '''Restricted Maximum Likelihood Estimation (REML)'''
         try:
@@ -66,10 +63,7 @@ class GWAS:
             X_cov_snp = np.column_stack([self.Xcov, snp_vec])
             XTV_invX = V_inv*X_cov_snp.T @ X_cov_snp
             XTV_invy = V_inv*X_cov_snp.T @ self.y
-            try:
-                beta = np.linalg.solve(XTV_invX, XTV_invy)
-            except np.linalg.LinAlgError:
-                beta = np.linalg.solve(XTV_invX+1e-6*np.eye(XTV_invX.shape[0]),XTV_invy)
+            beta = np.linalg.solve(XTV_invX, XTV_invy)
             r = self.y - X_cov_snp@beta
             rTV_invr = V_inv * r.T@r
             log_detV = np.sum(np.log(V))
@@ -77,9 +71,9 @@ class GWAS:
             total_log = (n-p)*np.log(rTV_invr) + log_detV + log_detXTV_invX # log items
             c = (n-p)*(np.log(n-p)-1-np.log(2*np.pi))/2 # Constant
             return c - total_log / 2
-        except Exception as e:
-            print(f"REML error: {e}, lbd={lbd}")
-            return -1e12
+        except: #  Exception as e
+            # print(f"REML error: {e}, lbd={lbd}")
+            return -1e8
     def _fit(self,snp:np.ndarray=None):
         X = np.column_stack([self.Xcov, snp])
         n,p = X.shape
@@ -122,11 +116,11 @@ class GWAS:
         snp_retain = np.array([],dtype=bool)
         t_start = time.time()
         for ii in range(len(chunk_indexs)-1):
+            gc.collect()
             snp_chunk = snp[:,chunk_indexs[ii]:chunk_indexs[ii+1]].astype(np.float32)
-            qc = QC(snp_chunk)
-            snp_chunk = qc.simple_QC()
+            snp_chunk,snp_retain_sub = simple_QC(snp_chunk)
             maf:np.ndarray = np.mean(snp_chunk,axis=0)/2
-            snp_retain = np.append(snp_retain,qc.SNP_retain)
+            snp_retain = np.append(snp_retain,snp_retain_sub)
             snp_chunk = self.Dh@snp_chunk
             def process_col(i):
                 return self._fit(snp_chunk[:, i])
@@ -141,6 +135,7 @@ class GWAS:
                 cpu,mem = get_process_info()
                 print(f'''\rCPU: {cpu}%, Memory: {round(mem,2)} G, Process: {all_time_info}''',end='')
             del snp_chunk,results # 释放内存
+            gc.collect()
         print()
         self.snp_retain = snp_retain
         return np.concatenate(beta_se_af_p)
@@ -163,10 +158,9 @@ class GWAS:
         for ii in range(len(chunk_indexs)-1):
             gc.collect()
             snp_chunk = snp[:,chunk_indexs[ii]:chunk_indexs[ii+1]].astype(np.float32)
-            qc = QC(snp_chunk)
-            snp_chunk = qc.simple_QC()
+            snp_chunk,snp_retain_sub = simple_QC(snp_chunk)
             maf:np.ndarray = np.mean(snp_chunk,axis=0)/2
-            snp_retain = np.append(snp_retain,qc.SNP_retain)
+            snp_retain = np.append(snp_retain,snp_retain_sub)
             snp_chunk = self.Dh@snp_chunk
             def process_col(i):
                 '''
