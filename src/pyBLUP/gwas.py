@@ -4,6 +4,9 @@ from scipy.stats import norm
 from joblib import Parallel, delayed # for parallel processing
 import gc # garbage collection
 import time
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning, 
+                        message="invalid value encountered in subtract")
 from .QC import simple_QC
 from .cpu_inspect import get_process_info
 
@@ -63,7 +66,10 @@ class GWAS:
             X_cov_snp = np.column_stack([self.Xcov, snp_vec])
             XTV_invX = V_inv*X_cov_snp.T @ X_cov_snp
             XTV_invy = V_inv*X_cov_snp.T @ self.y
-            beta = np.linalg.solve(XTV_invX, XTV_invy)
+            try:
+                beta = np.linalg.solve(XTV_invX, XTV_invy)
+            except:
+                beta = np.linalg.solve(XTV_invX+1e-8*np.eye(XTV_invX.shape[0]), XTV_invy)
             r = self.y - X_cov_snp@beta
             rTV_invr = V_inv * r.T@r
             log_detV = np.sum(np.log(V))
@@ -71,8 +77,7 @@ class GWAS:
             total_log = (n-p)*np.log(rTV_invr) + log_detV + log_detXTV_invX # log items
             c = (n-p)*(np.log(n-p)-1-np.log(2*np.pi))/2 # Constant
             return c - total_log / 2
-        except: #  Exception as e
-            # print(f"REML error: {e}, lbd={lbd}")
+        except:
             return -1e8
     def _fit(self,snp:np.ndarray=None):
         X = np.column_stack([self.Xcov, snp])
