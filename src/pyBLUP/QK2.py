@@ -89,7 +89,7 @@ class QK:
         idx = np.argsort(eigval)[::-1]
         eigval = eigval[idx]
         eigvec = eigvec[:, idx]
-        return eigvec,eigval,None
+        return eigvec,eigval
 
 if __name__ == '__main__':
     from gfreader import breader
